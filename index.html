@@ -329,7 +329,7 @@ IV. JSON OBRIGATÓRIO.
              });
         }
 
-        // --- COMPARTILHAMENTO ---
+       // --- COMPARTILHAMENTO (Versão Mensagem Limpa) ---
         window.shareTrip = function() { 
             var jsonStr = encodeURIComponent(JSON.stringify(tripData));
             var base64Data = btoa(jsonStr);
@@ -337,17 +337,11 @@ IV. JSON OBRIGATÓRIO.
                                 window.location.href.split('?')[0] + "?data=" + base64Data : 
                                 `${SERVER_SHARE_URL}?title=${encodeURIComponent(tripData.tripObjective)}&dest=${encodeURIComponent(tripData.destination)}&date=${encodeURIComponent(tripData.startDate)}&img=${encodeURIComponent(destinationImageUrl)}&data=${base64Data}`;
             
-            var text = `✈️ *Roteiro: ${tripData.destination}*\n📅 ${tripData.startDate}\n🔗 ${finalShareUrl}`;
+            // Texto formatado para o link ficar discretamente no final
+            var text = `*${tripData.tripObjective}* ✈️\n\n🗓️ ${tripData.startDate} a ${tripData.returnDate}\n📍 ${tripData.destination}\n\n👇 *Toque no cartão abaixo para ver o roteiro completo:*\n${finalShareUrl}`;
+            
             window.open("https://api.whatsapp.com/send?text=" + encodeURIComponent(text)); 
         }
-        window.toggleVoice = function(id) { 
-             if (!('webkitSpeechRecognition' in window)) return alert("Use Chrome.");
-             var r = new webkitSpeechRecognition(); r.lang = "pt-BR";
-             r.onresult = e => document.getElementById(id).value += " " + e.results[0][0].transcript;
-             r.start();
-        }
-        window.downloadPDF = function() { alert("Gerar PDF"); }
-        window.handleAdjustmentInput = function() { alert("Ajuste em breve!"); }
     </script>
 </body>
 </html>
