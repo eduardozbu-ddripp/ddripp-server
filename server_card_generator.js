@@ -5,31 +5,32 @@ const app = express();
 
 const PORT = process.env.PORT || 3000;
 
-// --- CONFIGURAÇÕES ---
-// ⚠️ IMPORTANTE: Em produção real, use Variáveis de Ambiente.
-// Para facilitar agora, cole sua chave aqui entre aspas.
-const GOOGLE_API_KEY = "AIzaSyCUm5k2QI-Xq0J9RSnu-hR-NPWkAaZQugM"; 
+// O servidor pega a chave do cofre do Render automaticamente
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY; 
 
 const THEME = {
     fontMain: 'bold 70px sans-serif',
     fontDate: '30px sans-serif',
     colorText: '#ffffff',
-    overlayColor: 'rgba(0, 0, 0, 0.4)', 
+    overlayColor: 'rgba(0, 0, 0, 0.5)', 
     logoText: 'ddripp' 
 };
 
-// Cache em memória (RAM)
 const backgroundCache = new Map();
 
-// --- FUNÇÃO: GERAR IMAGEM COM IA (GEMINI/IMAGEN) ---
+// --- GERAR IMAGEM COM GEMINI (IMAGEN 3) ---
 async function generateAIImage(prompt) {
-    console.log(`🎨 Pedindo para a IA pintar: "${prompt}"...`);
+    if (!GOOGLE_API_KEY) {
+        console.error("ERRO: Chave de API não configurada no Render!");
+        return null;
+    }
+    console.log(`🎨 Criando imagem com Gemini para: "${prompt}"...`);
     
-    // Endpoint do Modelo Imagen 3 (Via API Gemini)
+    // Endpoint do Imagen 3 via API Generative Language
     const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${GOOGLE_API_KEY}`;
     
     const payload = {
-        instances: [{ prompt: prompt + ", realistic, cinematic lighting, 8k, high quality travel photography" }],
+        instances: [{ prompt: `Beautiful travel photography of ${prompt}, cinematic lighting, 8k resolution, highly detailed, photorealistic` }],
         parameters: { sampleCount: 1, aspectRatio: "16:9" }
     };
 
@@ -40,23 +41,19 @@ async function generateAIImage(prompt) {
             body: JSON.stringify(payload)
         });
 
-        if (!response.ok) {
-            const err = await response.text();
-            throw new Error(`Erro na API Google: ${err}`);
-        }
+        if (!response.ok) throw new Error(await response.text());
 
         const data = await response.json();
-        // A imagem vem em Base64
+        // Imagen retorna Base64
         const base64Image = data.predictions[0].bytesBase64Encoded;
         return Buffer.from(base64Image, 'base64');
 
     } catch (error) {
-        console.error("Falha na geração IA:", error.message);
-        return null; // Retorna null para usar fallback
+        console.error("Falha na geração Gemini:", error.message);
+        return null; 
     }
 }
 
-// --- ROTA GERADORA DE IMAGEM ---
 app.get('/dynamic-cover', async (req, res) => {
     try {
         const { dest, date } = req.query;
@@ -68,49 +65,44 @@ app.get('/dynamic-cover', async (req, res) => {
         const canvas = createCanvas(width, height);
         const ctx = canvas.getContext('2d');
 
-        // 1. Busca ou Gera o Fundo
-        const cacheKey = `ia_img_${destination.toLowerCase()}`;
+        // Cache Inteligente
+        const cacheKey = `gemini_img_${destination.toLowerCase()}`;
         let image;
 
         if (backgroundCache.has(cacheKey)) {
-            console.log(`⚡ Cache Hit: Recuperando imagem de ${destination}`);
+            console.log(`⚡ Cache Hit: ${destination}`);
             image = await loadImage(backgroundCache.get(cacheKey));
         } else {
-            console.log(`🐢 Cache Miss: Iniciando geração para ${destination}`);
-            
-            // Tenta gerar com IA
+            // Tenta gerar com Gemini
             let imageBuffer = await generateAIImage(destination);
             
-            // Se a IA falhar (ou chave inválida), usa Unsplash como estepe
+            // Fallback para Unsplash se o Gemini falhar
             if (!imageBuffer) {
-                console.log("⚠️ Usando Unsplash como fallback");
+                console.log("⚠️ Fallback para Unsplash");
                 const unsplashUrl = `https://source.unsplash.com/1200x630/?${encodeURIComponent(destination)},travel`;
                 const resp = await fetch(unsplashUrl);
                 imageBuffer = await resp.buffer();
             }
 
-            // Salva no cache e carrega
             backgroundCache.set(cacheKey, imageBuffer);
             image = await loadImage(imageBuffer);
         }
 
-        // 2. Desenha o fundo
+        // Desenha
         ctx.drawImage(image, 0, 0, width, height);
-
-        // 3. Aplica a Identidade Visual ddripp
+        
+        // Identidade Visual
         ctx.fillStyle = THEME.overlayColor;
         ctx.fillRect(0, 0, width, height);
 
-        // Logo
         ctx.fillStyle = '#3B82F6'; 
         ctx.font = 'bold 40px sans-serif';
         ctx.fillText('ddripp', 50, 80);
 
-        // Texto Destino
         ctx.fillStyle = THEME.colorText;
         ctx.textAlign = 'center';
         
-        // Ajuste dinâmico de fonte para nomes longos
+        // Texto dinâmico
         let fontSize = 70;
         ctx.font = `bold ${fontSize}px sans-serif`;
         while (ctx.measureText(destination.toUpperCase()).width > width - 100 && fontSize > 30) {
@@ -120,36 +112,33 @@ app.get('/dynamic-cover', async (req, res) => {
         
         ctx.fillText(destination.toUpperCase(), width / 2, height / 2);
 
-        // Data
         ctx.font = THEME.fontDate;
         ctx.fillText(`📅 ${dateText}`, width / 2, (height / 2) + 60);
 
-        // Rodapé
         ctx.font = 'italic 20px sans-serif';
-        ctx.fillStyle = 'rgba(255,255,255,0.7)';
-        ctx.fillText('Roteiro Personalizado via Gemini AI', width / 2, height - 40);
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.fillText('Roteiro Gerado com IA', width / 2, height - 40);
 
         res.set('Content-Type', 'image/png');
         canvas.createPNGStream().pipe(res);
 
     } catch (error) {
         console.error(error);
-        res.status(500).send('Erro interno');
+        res.status(500).send('Erro ao gerar capa');
     }
 });
 
-// --- ROTA DE COMPARTILHAMENTO ---
+// Rota de Compartilhamento (Card WhatsApp)
 app.get('/share', (req, res) => {
     const { title, date, dest, data } = req.query;
     const pageTitle = title ? `Roteiro: ${title}` : 'Meu Roteiro ddripp';
     const pageDesc = `Confira os detalhes da viagem para ${dest || 'um destino incrível'}.`;
     
-    // URL dinâmica da imagem (aponta para a rota acima)
     const protocol = req.headers['x-forwarded-proto'] || req.protocol;
     const host = req.get('host');
     const dynamicImageUrl = `${protocol}://${host}/dynamic-cover?dest=${encodeURIComponent(dest||'')}&date=${encodeURIComponent(date||'')}`;
 
-    // URL do APP (Frontend)
+    // SEU LINK DO GITHUB PAGES
     const APP_URL = "https://eduardozbu-ddripp.github.io/ddripp-server/";
 
     const html = `
@@ -172,20 +161,16 @@ app.get('/share', (req, res) => {
     </head>
     <body>
         <div class="loader"></div>
-        <h2 style="margin-top:20px">Gerando visualização...</h2>
+        <h2 style="margin-top:20px">Abrindo roteiro...</h2>
         <script>
-            // Redireciona
             setTimeout(() => {
                 window.location.href = "${APP_URL}?data=${data}";
-            }, 500);
+            }, 1000);
         </script>
     </body>
     </html>
     `;
-
     res.send(html);
 });
 
-app.listen(PORT, () => {
-    console.log(`Servidor AI ddripp rodando na porta ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
