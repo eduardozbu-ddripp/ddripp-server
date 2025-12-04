@@ -1,12 +1,15 @@
 const express = require('express');
 const { createCanvas, loadImage } = require('canvas'); 
 const fetch = require('node-fetch'); 
-const crypto = require('crypto'); // Para criar chaves únicas de cache
 const app = express();
 
 const PORT = process.env.PORT || 3000;
 
-// --- CONFIGURAÇÕES DA MARCA DDRIPP ---
+// --- CONFIGURAÇÕES ---
+// ⚠️ IMPORTANTE: Em produção real, use Variáveis de Ambiente.
+// Para facilitar agora, cole sua chave aqui entre aspas.
+const GOOGLE_API_KEY = "AIzaSyBsLkwr1JTIjQHkoCwARVG5O6hdZRyPtl0"; 
+
 const THEME = {
     fontMain: 'bold 70px sans-serif',
     fontDate: '30px sans-serif',
@@ -15,115 +18,139 @@ const THEME = {
     logoText: 'ddripp' 
 };
 
-// --- CAMADA DE CACHE (Memória RAM) ---
-// Implementando o item 3 do seu PDF: "Cache Inteligente"
-// Armazena os buffers das imagens de fundo para não chamar a API/IA repetidamente
+// Cache em memória (RAM)
 const backgroundCache = new Map();
 
-// --- CAMADA DE FUNDO (Seção 3.A do PDF) ---
-async function getSmartBackground(destination, weather = 'sunny') {
-    // 1. Cria uma chave única para esse cenário (ex: "paris_cloudy")
-    const cacheKey = `${destination.toLowerCase()}_${weather.toLowerCase()}`;
+// --- FUNÇÃO: GERAR IMAGEM COM IA (GEMINI/IMAGEN) ---
+async function generateAIImage(prompt) {
+    console.log(`🎨 Pedindo para a IA pintar: "${prompt}"...`);
     
-    // 2. Verifica se já existe no Cache (Cache Hit)
-    if (backgroundCache.has(cacheKey)) {
-        console.log(`⚡ Cache Hit: Usando imagem salva para ${cacheKey}`);
-        return backgroundCache.get(cacheKey);
-    }
+    // Endpoint do Modelo Imagen 3 (Via API Gemini)
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${GOOGLE_API_KEY}`;
+    
+    const payload = {
+        instances: [{ prompt: prompt + ", realistic, cinematic lighting, 8k, high quality travel photography" }],
+        parameters: { sampleCount: 1, aspectRatio: "16:9" }
+    };
 
-    // 3. Cache Miss: Busca nova imagem (Simulando Vertex AI com Unsplash)
-    console.log(`🐢 Cache Miss: Gerando nova imagem para ${cacheKey}...`);
-    const query = encodeURIComponent(`${destination} ${weather} travel`);
-    const bgUrl = `https://source.unsplash.com/1200x630/?${query}`;
-    
     try {
-        const bgResponse = await fetch(bgUrl);
-        let bgBuffer;
-        
-        if (bgResponse.ok) {
-            bgBuffer = await bgResponse.buffer();
-        } else {
-            // Fallback de segurança
-            const fallback = await fetch('https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=1200&h=630&fit=crop');
-            bgBuffer = await fallback.buffer();
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const err = await response.text();
+            throw new Error(`Erro na API Google: ${err}`);
         }
 
-        // 4. Salva no Cache para o futuro (Economia Exponencial)
-        backgroundCache.set(cacheKey, bgBuffer);
-        return bgBuffer;
+        const data = await response.json();
+        // A imagem vem em Base64
+        const base64Image = data.predictions[0].bytesBase64Encoded;
+        return Buffer.from(base64Image, 'base64');
 
-    } catch (e) {
-        console.error("Erro ao buscar imagem:", e);
-        // Retorna buffer vazio ou erro controlado em produção
-        throw e;
+    } catch (error) {
+        console.error("Falha na geração IA:", error.message);
+        return null; // Retorna null para usar fallback
     }
 }
 
-// --- ROTA GERADORA DE IMAGEM (A Camada de Identidade) ---
+// --- ROTA GERADORA DE IMAGEM ---
 app.get('/dynamic-cover', async (req, res) => {
     try {
         const { dest, date } = req.query;
-        const destination = dest || 'Viagem Incrível';
-        const dateText = date || 'Data a definir';
+        const destination = dest || 'Viagem';
+        const dateText = date || '';
 
-        // Configuração do Canvas (1200x630 padrão WhatsApp/OpenGraph)
         const width = 1200;
         const height = 630;
         const canvas = createCanvas(width, height);
         const ctx = canvas.getContext('2d');
 
-        // 1. Obtém o Fundo (Do Cache ou da Web)
-        const bgBuffer = await getSmartBackground(destination);
-        const image = await loadImage(bgBuffer);
+        // 1. Busca ou Gera o Fundo
+        const cacheKey = `ia_img_${destination.toLowerCase()}`;
+        let image;
+
+        if (backgroundCache.has(cacheKey)) {
+            console.log(`⚡ Cache Hit: Recuperando imagem de ${destination}`);
+            image = await loadImage(backgroundCache.get(cacheKey));
+        } else {
+            console.log(`🐢 Cache Miss: Iniciando geração para ${destination}`);
+            
+            // Tenta gerar com IA
+            let imageBuffer = await generateAIImage(destination);
+            
+            // Se a IA falhar (ou chave inválida), usa Unsplash como estepe
+            if (!imageBuffer) {
+                console.log("⚠️ Usando Unsplash como fallback");
+                const unsplashUrl = `https://source.unsplash.com/1200x630/?${encodeURIComponent(destination)},travel`;
+                const resp = await fetch(unsplashUrl);
+                imageBuffer = await resp.buffer();
+            }
+
+            // Salva no cache e carrega
+            backgroundCache.set(cacheKey, imageBuffer);
+            image = await loadImage(imageBuffer);
+        }
+
+        // 2. Desenha o fundo
         ctx.drawImage(image, 0, 0, width, height);
 
-        // 2. Aplica a Identidade ddripp (Camada B - Seção 3.B do PDF)
-        
-        // A. Overlay Escuro
+        // 3. Aplica a Identidade Visual ddripp
         ctx.fillStyle = THEME.overlayColor;
         ctx.fillRect(0, 0, width, height);
 
-        // B. Logo ddripp
+        // Logo
         ctx.fillStyle = '#3B82F6'; 
         ctx.font = 'bold 40px sans-serif';
         ctx.fillText('ddripp', 50, 80);
 
-        // C. Título do Destino
+        // Texto Destino
         ctx.fillStyle = THEME.colorText;
-        ctx.font = THEME.fontMain;
         ctx.textAlign = 'center';
+        
+        // Ajuste dinâmico de fonte para nomes longos
+        let fontSize = 70;
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        while (ctx.measureText(destination.toUpperCase()).width > width - 100 && fontSize > 30) {
+            fontSize -= 5;
+            ctx.font = `bold ${fontSize}px sans-serif`;
+        }
+        
         ctx.fillText(destination.toUpperCase(), width / 2, height / 2);
 
-        // D. Data
+        // Data
         ctx.font = THEME.fontDate;
         ctx.fillText(`📅 ${dateText}`, width / 2, (height / 2) + 60);
 
-        // E. Rodapé
+        // Rodapé
         ctx.font = 'italic 20px sans-serif';
         ctx.fillStyle = 'rgba(255,255,255,0.7)';
-        ctx.fillText('Roteiro Personalizado', width / 2, height - 40);
+        ctx.fillText('Roteiro Personalizado via Gemini AI', width / 2, height - 40);
 
-        // Entrega a imagem final
         res.set('Content-Type', 'image/png');
         canvas.createPNGStream().pipe(res);
 
     } catch (error) {
         console.error(error);
-        res.status(500).send('Erro ao gerar capa');
+        res.status(500).send('Erro interno');
     }
 });
 
-// --- ROTA DE COMPARTILHAMENTO (O Envelopador) ---
+// --- ROTA DE COMPARTILHAMENTO ---
 app.get('/share', (req, res) => {
     const { title, date, dest, data } = req.query;
-
     const pageTitle = title ? `Roteiro: ${title}` : 'Meu Roteiro ddripp';
     const pageDesc = `Confira os detalhes da viagem para ${dest || 'um destino incrível'}.`;
     
-    // URL dinâmica para a imagem
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol; // Importante para HTTPS no Render
+    // URL dinâmica da imagem (aponta para a rota acima)
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
     const host = req.get('host');
-    const dynamicImageUrl = `${protocol}://${host}/dynamic-cover?dest=${encodeURIComponent(dest || '')}&date=${encodeURIComponent(date || '')}`;
+    const dynamicImageUrl = `${protocol}://${host}/dynamic-cover?dest=${encodeURIComponent(dest||'')}&date=${encodeURIComponent(date||'')}`;
+
+    // URL do APP (Frontend)
+    const APP_URL = "https://eduardozbu-ddripp.github.io/ddripp-server/";
 
     const html = `
     <!DOCTYPE html>
@@ -133,32 +160,23 @@ app.get('/share', (req, res) => {
         <meta property="og:site_name" content="ddripp">
         <meta property="og:title" content="${pageTitle}">
         <meta property="og:description" content="${pageDesc}">
-        
-        <!-- O WhatsApp usa esta meta tag para mostrar a imagem -->
         <meta property="og:image" content="${dynamicImageUrl}">
         <meta property="og:image:width" content="1200">
         <meta property="og:image:height" content="630">
-        
         <meta name="twitter:card" content="summary_large_image">
         <title>${pageTitle}</title>
         <style>
             body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #f0f9ff; color: #0c4a6e; }
             .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3B82F6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
-            .btn { margin-top: 20px; padding: 10px 20px; background: #3B82F6; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; }
         </style>
     </head>
     <body>
         <div class="loader"></div>
-        <h2 style="margin-top:20px">Abrindo roteiro...</h2>
-        
+        <h2 style="margin-top:20px">Gerando visualização...</h2>
         <script>
-            // REDIRECIONAMENTO PARA O APP
-            // Substitua pela URL final do seu Github Pages
-            const APP_URL = "https://eduardozbu-ddripp.github.io/ddripp-server/"; 
-            
-            // Pequeno delay para garantir que o crawler do WhatsApp leia os meta dados antes do redirect (para usuários reais)
+            // Redireciona
             setTimeout(() => {
-                window.location.href = APP_URL + "?data=${data}";
+                window.location.href = "${APP_URL}?data=${data}";
             }, 500);
         </script>
     </body>
@@ -169,5 +187,5 @@ app.get('/share', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Fábrica de Capas ddripp rodando na porta ${PORT}`);
+    console.log(`Servidor AI ddripp rodando na porta ${PORT}`);
 });
