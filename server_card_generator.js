@@ -5,8 +5,8 @@ const app = express();
 
 const PORT = process.env.PORT || 3000;
 
-// O SEGREDO: O código lê a chave do cofre do Render (Environment Variable)
-// Não cole sua chave aqui! Deixe como está.
+// ⚠️ ATENÇÃO: NÃO COLE SUA CHAVE AQUI!
+// O código vai buscar a chave automaticamente nas configurações do Render.
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY; 
 
 const THEME = {
@@ -26,6 +26,8 @@ async function generateAIImage(prompt) {
     }
     
     console.log(`🎨 Gerando imagem IA para: "${prompt}"...`);
+    
+    // Usa o modelo Imagen 3 via API
     const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${GOOGLE_API_KEY}`;
     
     const payload = {
@@ -33,21 +35,25 @@ async function generateAIImage(prompt) {
         parameters: { sampleCount: 1, aspectRatio: "16:9" }
     };
 
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
 
-    if (!response.ok) {
-        const errText = await response.text();
-        console.error("Erro Google API:", errText);
-        throw new Error(`Google recusou a geração: ${errText}`);
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Google recusou a geração: ${errText}`);
+        }
+
+        const data = await response.json();
+        if (!data.predictions) throw new Error("Nenhuma imagem retornada.");
+        return Buffer.from(data.predictions[0].bytesBase64Encoded, 'base64');
+    } catch (e) {
+        console.error("Erro IA:", e.message);
+        return null;
     }
-
-    const data = await response.json();
-    if (!data.predictions) throw new Error("Nenhuma imagem retornada.");
-    return Buffer.from(data.predictions[0].bytesBase64Encoded, 'base64');
 }
 
 app.get('/dynamic-cover', async (req, res) => {
@@ -61,23 +67,25 @@ app.get('/dynamic-cover', async (req, res) => {
         const canvas = createCanvas(width, height);
         const ctx = canvas.getContext('2d');
 
-        // Cache e Geração
-        const cacheKey = `img_v2_${destination.toLowerCase()}`;
+        // Cache Inteligente
+        const cacheKey = `img_gen_${destination.toLowerCase()}`;
         let image;
 
         if (backgroundCache.has(cacheKey)) {
             console.log(`⚡ Cache Hit: ${destination}`);
             image = await loadImage(backgroundCache.get(cacheKey));
         } else {
-            let imgBuffer;
-            try {
-                imgBuffer = await generateAIImage(destination);
-            } catch (e) {
-                console.error("Falha na IA, usando fallback:", e.message);
-                // Fallback para Unsplash se a IA falhar
-                const unsplash = await fetch(`https://source.unsplash.com/1200x630/?${encodeURIComponent(destination)},travel`);
-                imgBuffer = await unsplash.buffer();
+            // Tenta gerar com IA
+            let imgBuffer = await generateAIImage(destination);
+            
+            // Fallback (Unsplash) se a IA falhar
+            if (!imgBuffer) {
+                console.log("⚠️ Usando Unsplash (Fallback)");
+                const unsplashUrl = `https://source.unsplash.com/1200x630/?${encodeURIComponent(destination)},travel`;
+                const resp = await fetch(unsplashUrl);
+                imgBuffer = await resp.buffer();
             }
+            
             backgroundCache.set(cacheKey, imgBuffer);
             image = await loadImage(imgBuffer);
         }
@@ -96,6 +104,7 @@ app.get('/dynamic-cover', async (req, res) => {
         ctx.fillStyle = THEME.colorText;
         ctx.textAlign = 'center';
         
+        // Texto dinâmico
         let fontSize = 70;
         ctx.font = `bold ${fontSize}px sans-serif`;
         while (ctx.measureText(destination.toUpperCase()).width > width - 100 && fontSize > 30) {
@@ -121,7 +130,6 @@ app.get('/dynamic-cover', async (req, res) => {
     }
 });
 
-// Rota de Compartilhamento
 app.get('/share', (req, res) => {
     const { title, date, dest, data } = req.query;
     const pageTitle = title ? `Roteiro: ${title}` : 'Meu Roteiro ddripp';
@@ -131,7 +139,7 @@ app.get('/share', (req, res) => {
     const host = req.get('host');
     const dynamicImageUrl = `${protocol}://${host}/dynamic-cover?dest=${encodeURIComponent(dest||'')}&date=${encodeURIComponent(date||'')}`;
 
-    // SEU SITE NO GITHUB PAGES
+    // SEU LINK DO GITHUB PAGES
     const APP_URL = "https://eduardozbu-ddripp.github.io/ddripp-server/";
 
     const html = `
