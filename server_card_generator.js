@@ -4,56 +4,38 @@ const fetch = require('node-fetch');
 const app = express();
 
 const PORT = process.env.PORT || 3000;
-
-// ⚠️ ATENÇÃO: NÃO COLE SUA CHAVE AQUI!
-// O código vai buscar a chave automaticamente nas configurações do Render.
+// Pega a chave do cofre do Render
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY; 
-
-const THEME = {
-    fontMain: 'bold 70px sans-serif',
-    fontDate: '30px sans-serif',
-    colorText: '#ffffff',
-    overlayColor: 'rgba(0, 0, 0, 0.5)', 
-    logoText: 'ddripp' 
-};
 
 const backgroundCache = new Map();
 
-async function generateAIImage(prompt) {
-    if (!GOOGLE_API_KEY) {
-        console.error("ERRO CRÍTICO: Chave de API não encontrada no Environment do Render.");
-        throw new Error("Servidor sem configuração de API Key.");
-    }
+// --- FUNÇÃO DE GERAÇÃO COM RETENTATIVA ---
+async function tryGenerateImage(prompt, modelVersion) {
+    // modelVersion pode ser 'imagen-3.0-generate-001' ou 'image-generation-002'
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelVersion}:predict?key=${GOOGLE_API_KEY}`;
     
-    console.log(`🎨 Gerando imagem IA para: "${prompt}"...`);
-    
-    // Usa o modelo Imagen 3 via API
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${GOOGLE_API_KEY}`;
-    
+    console.log(`🎨 Tentando gerar com modelo: ${modelVersion}...`);
+
     const payload = {
-        instances: [{ prompt: `Beautiful travel photography of ${prompt}, cinematic lighting, 8k resolution, photorealistic, landscape` }],
+        instances: [{ prompt: `High quality travel photography of ${prompt}, cinematic lighting, 8k, landscape` }],
         parameters: { sampleCount: 1, aspectRatio: "16:9" }
     };
 
-    try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
 
-        if (!response.ok) {
-            const errText = await response.text();
-            throw new Error(`Google recusou a geração: ${errText}`);
-        }
-
-        const data = await response.json();
-        if (!data.predictions) throw new Error("Nenhuma imagem retornada.");
-        return Buffer.from(data.predictions[0].bytesBase64Encoded, 'base64');
-    } catch (e) {
-        console.error("Erro IA:", e.message);
-        return null;
+    if (!response.ok) {
+        throw new Error(await response.text());
     }
+
+    const data = await response.json();
+    if (data.predictions && data.predictions[0]?.bytesBase64Encoded) {
+        return Buffer.from(data.predictions[0].bytesBase64Encoded, 'base64');
+    }
+    throw new Error("API respondeu mas sem imagem.");
 }
 
 app.get('/dynamic-cover', async (req, res) => {
@@ -67,44 +49,70 @@ app.get('/dynamic-cover', async (req, res) => {
         const canvas = createCanvas(width, height);
         const ctx = canvas.getContext('2d');
 
-        // Cache Inteligente
-        const cacheKey = `img_gen_${destination.toLowerCase()}`;
+        // 1. TENTA OBTER A IMAGEM
+        const cacheKey = `img_dual_${destination.toLowerCase()}`;
         let image;
 
         if (backgroundCache.has(cacheKey)) {
             console.log(`⚡ Cache Hit: ${destination}`);
             image = await loadImage(backgroundCache.get(cacheKey));
         } else {
-            // Tenta gerar com IA
-            let imgBuffer = await generateAIImage(destination);
-            
-            // Fallback (Unsplash) se a IA falhar
-            if (!imgBuffer) {
-                console.log("⚠️ Usando Unsplash (Fallback)");
-                const unsplashUrl = `https://source.unsplash.com/1200x630/?${encodeURIComponent(destination)},travel`;
-                const resp = await fetch(unsplashUrl);
-                imgBuffer = await resp.buffer();
+            let imgBuffer;
+            try {
+                // TENTATIVA A: Imagen 3 (Mais moderno)
+                imgBuffer = await tryGenerateImage(destination, 'imagen-3.0-generate-001');
+            } catch (erro3) {
+                console.warn("⚠️ Imagen 3 falhou. Tentando Imagen 2...", erro3.message);
+                try {
+                    // TENTATIVA B: Imagen 2 (Mais compatível)
+                    // Nota: O endpoint antigo às vezes chama 'image-generation-002'
+                    imgBuffer = await tryGenerateImage(destination, 'image-generation-002');
+                } catch (erro2) {
+                    console.error("❌ Imagen 2 também falhou:", erro2.message);
+                    
+                    // FALLBACK FINAL: Desenha um fundo colorido se nenhuma IA funcionar
+                    // Isso evita o erro 500 e mostra o card pelo menos com texto
+                    const fallbackCanvas = createCanvas(width, height);
+                    const fCtx = fallbackCanvas.getContext('2d');
+                    // Gradiente elegante
+                    const grd = fCtx.createLinearGradient(0, 0, width, height);
+                    grd.addColorStop(0, "#1e3a8a");
+                    grd.addColorStop(1, "#3b82f6");
+                    fCtx.fillStyle = grd;
+                    fCtx.fillRect(0, 0, width, height);
+                    image = fallbackCanvas; 
+                }
             }
-            
-            backgroundCache.set(cacheKey, imgBuffer);
-            image = await loadImage(imgBuffer);
+
+            if (imgBuffer) {
+                backgroundCache.set(cacheKey, imgBuffer);
+                image = await loadImage(imgBuffer);
+            }
         }
 
-        // Desenha
+        // Se imagem for nula (fallback de cor já tratou acima, mas garantindo)
+        if (!image) {
+             const fallbackCanvas = createCanvas(width, height);
+             const fCtx = fallbackCanvas.getContext('2d');
+             fCtx.fillStyle = "#1e3a8a";
+             fCtx.fillRect(0,0,width,height);
+             image = fallbackCanvas;
+        }
+
+        // 2. DESENHA
         ctx.drawImage(image, 0, 0, width, height);
-        
-        // Identidade Visual
-        ctx.fillStyle = THEME.overlayColor;
+
+        // 3. APLICA TEXTO (Identidade)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
         ctx.fillRect(0, 0, width, height);
 
         ctx.fillStyle = '#3B82F6'; 
         ctx.font = 'bold 40px sans-serif';
         ctx.fillText('ddripp', 50, 80);
 
-        ctx.fillStyle = THEME.colorText;
+        ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'center';
         
-        // Texto dinâmico
         let fontSize = 70;
         ctx.font = `bold ${fontSize}px sans-serif`;
         while (ctx.measureText(destination.toUpperCase()).width > width - 100 && fontSize > 30) {
@@ -114,56 +122,46 @@ app.get('/dynamic-cover', async (req, res) => {
         
         ctx.fillText(destination.toUpperCase(), width / 2, height / 2);
 
-        ctx.font = THEME.fontDate;
+        ctx.font = '30px sans-serif';
         ctx.fillText(`📅 ${dateText}`, width / 2, (height / 2) + 60);
-
-        ctx.font = 'italic 20px sans-serif';
-        ctx.fillStyle = 'rgba(255,255,255,0.8)';
-        ctx.fillText('Roteiro Personalizado', width / 2, height - 40);
 
         res.set('Content-Type', 'image/png');
         canvas.createPNGStream().pipe(res);
 
     } catch (error) {
-        console.error(error);
-        res.status(500).send('Erro interno no servidor');
+        console.error("ERRO CRÍTICO:", error);
+        // Resposta de emergência para não quebrar o zap
+        res.status(200).send("Erro, mas o servidor vive.");
     }
 });
 
 app.get('/share', (req, res) => {
     const { title, date, dest, data } = req.query;
-    const pageTitle = title ? `Roteiro: ${title}` : 'Meu Roteiro ddripp';
-    const pageDesc = `Confira os detalhes da viagem para ${dest}.`;
-    
+    const pageTitle = title || 'Roteiro';
     const protocol = req.headers['x-forwarded-proto'] || req.protocol;
     const host = req.get('host');
-    const dynamicImageUrl = `${protocol}://${host}/dynamic-cover?dest=${encodeURIComponent(dest||'')}&date=${encodeURIComponent(date||'')}`;
-
-    // SEU LINK DO GITHUB PAGES
-    const APP_URL = "https://eduardozbu-ddripp.github.io/ddripp-server/";
+    const imgUrl = `${protocol}://${host}/dynamic-cover?dest=${encodeURIComponent(dest||'')}&date=${encodeURIComponent(date||'')}`;
+    const APP_URL = "https://eduardozbu-ddripp.github.io/ddripp-server/"; 
 
     const html = `
     <!DOCTYPE html>
     <html lang="pt-BR">
     <head>
         <meta charset="UTF-8">
-        <meta property="og:site_name" content="ddripp">
         <meta property="og:title" content="${pageTitle}">
-        <meta property="og:description" content="${pageDesc}">
-        <meta property="og:image" content="${dynamicImageUrl}">
+        <meta property="og:description" content="Confira o roteiro de viagem para ${dest}">
+        <meta property="og:image" content="${imgUrl}">
         <meta property="og:image:width" content="1200">
         <meta property="og:image:height" content="630">
         <meta name="twitter:card" content="summary_large_image">
         <title>${pageTitle}</title>
-        <style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;background:#f0f9ff;color:#0c4a6e}</style>
     </head>
     <body>
-        <h2>Redirecionando...</h2>
-        <script>setTimeout(() => { window.location.href = "${APP_URL}?data=${data}"; }, 100);</script>
+        <h2>Carregando...</h2>
+        <script>window.location.href = "${APP_URL}?data=${data}";</script>
     </body>
-    </html>
-    `;
+    </html>`;
     res.send(html);
 });
 
-app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log(`Servidor Duplo rodando na porta ${PORT}`));
