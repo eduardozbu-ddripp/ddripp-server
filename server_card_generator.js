@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 3000;
 // --- CONFIGURAÇÕES ---
 // ⚠️ IMPORTANTE: Em produção real, use Variáveis de Ambiente.
 // Para facilitar agora, cole sua chave aqui entre aspas.
-const GOOGLE_API_KEY = "AIzaSyBsLkwr1JTIjQHkoCwARVG5O6hdZRyPtl0"; 
+const GOOGLE_API_KEY = "AIzaSyCUm5k2QI-Xq0J9RSnu-hR-NPWkAaZQugM"; 
 
 const THEME = {
     fontMain: 'bold 70px sans-serif',
