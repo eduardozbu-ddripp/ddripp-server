@@ -16,18 +16,18 @@
     <script>
         var distanceMatrixService = null;
         var directionsService = null;
-        var geocoder = null; // Adicionado Geocoder
+        var geocoder = null;
         function initMap() {
             if (typeof google !== 'undefined') {
                 try {
                     distanceMatrixService = new google.maps.DistanceMatrixService();
                     directionsService = new google.maps.DirectionsService();
-                    geocoder = new google.maps.Geocoder(); // Inicializa Geocoder
+                    geocoder = new google.maps.Geocoder();
                 } catch(e) { console.warn("Erro Maps", e); }
             }
         }
     </script>
-    <!-- ⚠️ SUA CHAVE DO GOOGLE MAPS JÁ ESTÁ AQUI -->
+    <!-- SUA CHAVE DO GOOGLE MAPS -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBLF56FKjEiydFp63F9IKm37TsiF3e5Gyk&libraries=places&callback=initMap" async defer></script>
 
     <style>
@@ -53,8 +53,21 @@
         .loading-dots::after { content: ' .'; animation: dots 1.5s steps(5, end) infinite; }
         @keyframes dots { 0%, 20% { content: ' .'; } 40% { content: ' ..'; } 60% { content: ' ...'; } 80%, 100% { content: ''; } }
         
-        /* Estilos do Widget de Clima */
-        .weather-widget { background: rgba(255,255,255,0.9); backdrop-filter: blur(4px); padding: 8px 12px; border-radius: 12px; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-top: 8px; }
+        /* Widget de Clima */
+        .weather-badge {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(4px);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            color: #4b5563;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            border: 1px solid #e5e7eb;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -119,21 +132,26 @@ IV. JSON OBRIGATÓRIO.
 
         <!-- Tela 4: Roteiro Rico -->
         <div id="itinerary-view" class="hidden bg-white p-4 rounded-2xl">
-            <header id="trip-header" class="mb-8 bg-gray-50 p-6 rounded-2xl card-shadow border-l-4 border-blue-500 relative overflow-hidden min-h-[200px] flex flex-col justify-end">
-                <div id="header-bg-image" class="absolute inset-0 bg-cover bg-center z-0 transition-opacity duration-500" style="opacity: 0.9;"></div>
-                <!-- Overlay gradiente para leitura -->
-                <div class="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-transparent z-0"></div>
+            <!-- HEADER COM PREVIEW REAL -->
+            <header id="trip-header" class="mb-8 bg-gray-50 p-6 rounded-2xl card-shadow border-l-4 border-blue-500 relative overflow-hidden min-h-[220px] flex flex-col justify-end">
+                <!-- Imagem de Fundo (Carregada do Servidor) -->
+                <div id="header-bg-image" class="absolute inset-0 bg-cover bg-center z-0 transition-opacity duration-700" style="opacity: 0;"></div>
+                <div id="header-loader" class="absolute inset-0 flex items-center justify-center bg-gray-100 z-0">
+                    <div class="animate-pulse flex space-x-2 text-gray-400 text-sm"><i class="fas fa-magic"></i><span>Gerando capa com IA...</span></div>
+                </div>
+                <!-- Gradiente para leitura -->
+                <div class="absolute inset-0 bg-gradient-to-t from-white via-white/70 to-transparent z-0"></div>
                 
-                <div class="relative z-10 mt-20">
+                <div class="relative z-10 mt-16">
                     <h2 id="trip-title" class="text-3xl font-bold text-gray-800 mb-2"></h2>
                     <div class="flex flex-wrap items-center gap-3 text-gray-600 mb-3">
                         <a id="trip-destination-link" href="#" target="_blank" class="flex items-center bg-white px-3 py-1 rounded-full text-sm shadow-sm hover:text-blue-600 border border-gray-200"><i class="fas fa-map-marker-alt mr-2 text-red-500"></i><span id="trip-destination"></span></a>
                         <div class="flex items-center bg-white px-3 py-1 rounded-full text-sm shadow-sm border border-gray-200"><i class="fas fa-calendar-alt mr-2 text-blue-500"></i><span id="trip-date-range"></span></div>
                     </div>
-                    <!-- Widget de Clima -->
-                    <div id="weather-display" class="hidden weather-widget">
-                        <i class="fas fa-cloud-sun text-orange-400"></i>
-                        <span id="weather-text">Carregando previsão...</span>
+                    
+                    <!-- WIDGET DE CLIMA -->
+                    <div id="weather-widget" class="hidden weather-badge animate-fade-in-up">
+                        <!-- Conteúdo injetado via JS -->
                     </div>
                 </div>
             </header>
@@ -169,7 +187,6 @@ IV. JSON OBRIGATÓRIO.
         var MODELS_TO_TRY = ["gemini-2.0-flash", "gemini-1.5-flash"]; 
 
         // 2. CONFIGURAÇÃO DO SERVIDOR DE CARDS (RENDER)
-        // Já configurei com o seu link correto
         var SERVER_SHARE_URL = "https://ddripp-server.onrender.com/share"; 
         // =================================================================
 
@@ -198,17 +215,80 @@ IV. JSON OBRIGATÓRIO.
             document.getElementById('fixed-footer-input').classList.add('hidden');
             document.getElementById('floating-pdf-btn').classList.remove('hidden');
             renderItineraryContent();
-            fetchWeather(tripData.destination); // Carrega clima também no modo leitura
-            
-            // Carrega imagem de fundo usando o servidor (Preview Real)
-            if (SERVER_SHARE_URL) {
-                // A URL de imagem que vai pro card:
-                var previewUrl = SERVER_SHARE_URL.replace('/share', '/dynamic-cover') + `?dest=${encodeURIComponent(tripData.destination)}&date=${encodeURIComponent(tripData.startDate||'')}`;
-                document.getElementById('header-bg-image').style.backgroundImage = `url('${previewUrl}')`;
-            }
+            fetchWeather(tripData.destination);
+            loadHeaderImage();
         }
 
-        // --- UPLOAD E VISUALIZAÇÃO DE ARQUIVOS ---
+        // --- CARREGAMENTO DE IMAGEM DO SERVIDOR (PREVIEW) ---
+        function loadHeaderImage() {
+            if (!SERVER_SHARE_URL) return;
+            
+            // Monta a URL da imagem dinâmica
+            var dynamicImgUrl = SERVER_SHARE_URL.replace('/share', '/dynamic-cover') + `?dest=${encodeURIComponent(tripData.destination)}&date=${encodeURIComponent(tripData.startDate||'')}`;
+            
+            // Pré-carrega a imagem
+            var img = new Image();
+            img.onload = function() {
+                var headerBg = document.getElementById('header-bg-image');
+                headerBg.style.backgroundImage = `url('${dynamicImgUrl}')`;
+                headerBg.style.opacity = '0.9'; // Revela a imagem
+                document.getElementById('header-loader').classList.add('hidden'); // Esconde loader
+            };
+            img.src = dynamicImgUrl;
+        }
+
+        // --- CLIMA EM TEMPO REAL (OPEN-METEO) ---
+        function fetchWeather(destination) {
+            if (!geocoder) return;
+            geocoder.geocode({ 'address': destination }, function(results, status) {
+                if (status === 'OK' && results[0]) {
+                    var lat = results[0].geometry.location.lat();
+                    var lng = results[0].geometry.location.lng();
+                    
+                    // Busca Clima
+                    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto`)
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.daily) {
+                                var max = Math.round(data.daily.temperature_2m_max[0]);
+                                var min = Math.round(data.daily.temperature_2m_min[0]);
+                                var code = data.daily.weathercode[0];
+                                var icon = getWeatherIcon(code);
+                                var desc = getWeatherDesc(code);
+                                
+                                var widget = document.getElementById('weather-widget');
+                                widget.innerHTML = `${icon} <span class="font-bold text-gray-800">${max}° / ${min}°</span> <span class="text-xs text-gray-500 border-l pl-2 ml-1 border-gray-300">${desc}</span>`;
+                                widget.classList.remove('hidden');
+                            }
+                        })
+                        .catch(e => console.warn("Erro ao buscar clima:", e));
+                }
+            });
+        }
+
+        function getWeatherIcon(code) {
+            if (code <= 1) return '<i class="fas fa-sun text-yellow-500 text-lg"></i>';
+            if (code <= 3) return '<i class="fas fa-cloud-sun text-orange-400 text-lg"></i>';
+            if (code <= 48) return '<i class="fas fa-smog text-gray-400 text-lg"></i>';
+            if (code <= 67) return '<i class="fas fa-cloud-rain text-blue-400 text-lg"></i>';
+            if (code <= 82) return '<i class="fas fa-cloud-showers-heavy text-blue-600 text-lg"></i>';
+            if (code <= 99) return '<i class="fas fa-bolt text-purple-500 text-lg"></i>';
+            return '<i class="fas fa-cloud text-gray-400 text-lg"></i>';
+        }
+        
+        function getWeatherDesc(code) {
+            if (code <= 1) return 'Ensolarado';
+            if (code <= 3) return 'Parcialmente Nublado';
+            if (code <= 48) return 'Neblina';
+            if (code <= 67) return 'Chuvoso';
+            if (code <= 82) return 'Chuva Forte';
+            if (code <= 99) return 'Tempestade';
+            return 'Nublado';
+        }
+
+        // --- UPLOAD, LLM, CORE LOGIC (Mantidos) ---
+        // (O restante do código é igual ao anterior, focamos nas melhorias acima)
+        
         function handleFileSelect(input) {
             var files = Array.from(input.files);
             if (!files.length) return;
@@ -234,7 +314,6 @@ IV. JSON OBRIGATÓRIO.
         }
         function removeFile(index) { selectedFiles.splice(index, 1); renderFilePreviews(); }
 
-        // --- LLM CALL ---
         async function callGeminiSmart(userContentParts, systemInstructionText, responseSchema) {
             var payload = { contents: [{ parts: userContentParts }], systemInstruction: { parts: [{ text: systemInstructionText }] }, generationConfig: { responseMimeType: "application/json" } };
             if (responseSchema) payload.generationConfig.responseSchema = responseSchema;
@@ -250,7 +329,6 @@ IV. JSON OBRIGATÓRIO.
             throw new Error("Falha na IA.");
         }
 
-        // --- CORE LOGIC ---
         window.handleInitialInput = async function() {
             var inputVal = document.getElementById('initial-input').value;
             if (!inputVal && selectedFiles.length === 0) return alert('Por favor, diga algo ou anexe um arquivo.');
@@ -283,7 +361,6 @@ IV. JSON OBRIGATÓRIO.
             } catch (e) { document.getElementById('loading-spinner').classList.add('hidden'); alert("Erro: " + e.message); }
         }
 
-        // --- UI & HELPERS ---
         async function fillGeographicGaps() {
              tripData.activities.sort((a,b) => parseDate(a.date) - parseDate(b.date) || a.time.localeCompare(b.time));
         }
@@ -320,68 +397,15 @@ IV. JSON OBRIGATÓRIO.
             if(missingInfoQueue.length) window.askNext(); else { document.getElementById('gap-filling-view').classList.add('hidden'); handleInitialInput(); }
         }
         window.generateItinerary = function() {
-            // Preview com Imagem do Servidor
-            if (SERVER_SHARE_URL) {
-                var previewUrl = SERVER_SHARE_URL.replace('/share', '/dynamic-cover') + `?dest=${encodeURIComponent(tripData.destination)}&date=${encodeURIComponent(tripData.startDate||'')}`;
-                // Fallback para Unsplash enquanto o servidor acorda
-                document.getElementById('header-bg-image').style.backgroundImage = `url('${previewUrl}'), url('https://source.unsplash.com/1200x600/?${encodeURIComponent(tripData.destination)},travel')`;
-            } else {
-                fetch(`https://source.unsplash.com/1200x600/?${encodeURIComponent(tripData.destination)},travel`).then(r => {
-                    if(r.ok) { destinationImageUrl = r.url; document.getElementById('header-bg-image').style.backgroundImage = "url('" + r.url + "')"; }
-                });
-            }
+            // Chamadas de Preview e Clima feitas no final do load
+            loadHeaderImage(); // Preview Real
+            fetchWeather(tripData.destination); // Clima Real
             
             document.getElementById('initial-view').classList.add('hidden');
             document.getElementById('itinerary-view').classList.remove('hidden');
             document.getElementById('fixed-footer-input').classList.remove('hidden');
-            
             renderItineraryContent();
-            fetchWeather(tripData.destination); // Chama clima real
-
-            // Aquecimento do Servidor
-            if (SERVER_SHARE_URL && SERVER_SHARE_URL.includes("http")) {
-                var sDate = tripData.startDate || "";
-                var dest = tripData.destination || "Viagem";
-                var pingUrl = `${SERVER_SHARE_URL}?title=Ping&dest=${encodeURIComponent(dest)}&date=${encodeURIComponent(sDate)}&warmup=true`;
-                fetch(pingUrl, { mode: 'no-cors' }).catch(e => console.log("Servidor acordado!"));
-            }
         }
-        
-        // --- PREVISÃO DO TEMPO REAL (OPEN-METEO) ---
-        function fetchWeather(destination) {
-            if (!geocoder) return;
-            document.getElementById('weather-display').classList.remove('hidden');
-            geocoder.geocode({ 'address': destination }, function(results, status) {
-                if (status === 'OK' && results[0]) {
-                    var lat = results[0].geometry.location.lat();
-                    var lng = results[0].geometry.location.lng();
-                    
-                    // Chama API Open-Meteo (Gratuita, sem chave)
-                    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto`)
-                    .then(r => r.json())
-                    .then(data => {
-                        if(data.daily) {
-                            var max = Math.round(data.daily.temperature_2m_max[0]);
-                            var min = Math.round(data.daily.temperature_2m_min[0]);
-                            var code = data.daily.weathercode[0];
-                            var icon = getWeatherIcon(code);
-                            document.getElementById('weather-display').innerHTML = `${icon} <span class="font-bold ml-1">${max}°C</span> / ${min}°C <span class="text-gray-500 ml-1 text-xs">Hoje</span>`;
-                        }
-                    })
-                    .catch(e => { console.warn("Erro clima", e); document.getElementById('weather-display').classList.add('hidden'); });
-                }
-            });
-        }
-        
-        function getWeatherIcon(code) {
-            // Mapeamento simples WMO code -> Icon
-            if (code <= 3) return '<i class="fas fa-sun text-yellow-500"></i>';
-            if (code <= 48) return '<i class="fas fa-cloud text-gray-400"></i>';
-            if (code <= 67) return '<i class="fas fa-cloud-rain text-blue-400"></i>';
-            if (code <= 82) return '<i class="fas fa-cloud-showers-heavy text-blue-600"></i>';
-            return '<i class="fas fa-bolt text-purple-500"></i>';
-        }
-
         function renderItineraryContent() {
              document.getElementById('trip-title').textContent = tripData.tripObjective || "Viagem";
              document.getElementById('trip-destination').textContent = tripData.destination;
@@ -402,7 +426,7 @@ IV. JSON OBRIGATÓRIO.
                                 window.location.href.split('?')[0] + "?data=" + base64Data : 
                                 `${SERVER_SHARE_URL}?title=${encodeURIComponent(tripData.tripObjective)}&dest=${encodeURIComponent(tripData.destination)}&date=${encodeURIComponent(tripData.startDate)}&img=${encodeURIComponent(destinationImageUrl)}&data=${base64Data}`;
             
-            var text = `✈️ *Roteiro: ${tripData.destination}*\n📅 ${tripData.startDate}\n🔗 ${finalShareUrl}`;
+            var text = `*${tripData.tripObjective}* ✈️\n\n🗓️ ${tripData.startDate} a ${tripData.returnDate}\n📍 ${tripData.destination}\n\n👇 *Toque no cartão abaixo para ver o roteiro completo:*\n${finalShareUrl}`;
             window.open("https://api.whatsapp.com/send?text=" + encodeURIComponent(text)); 
         }
         window.toggleVoice = function(id) { 
