@@ -154,7 +154,7 @@ app.get('/share', (req, res) => {
         <script>
             // REDIRECIONAMENTO PARA O APP
             // Substitua pela URL final do seu Github Pages
-            const APP_URL = "https://seu-usuario.github.io/ddripp/ddripp_app.html"; 
+            const APP_URL = "https://eduardozbu-ddripp.github.io/ddripp-server/"; 
             
             // Pequeno delay para garantir que o crawler do WhatsApp leia os meta dados antes do redirect (para usuários reais)
             setTimeout(() => {
