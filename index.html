@@ -4,11 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ddripp - Digital Roadbook</title>
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Fontes -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Google Maps Config -->
     <script>
-        var distanceMatrixService = null, directionsService = null, geocoder = null;
+        var distanceMatrixService = null;
+        var directionsService = null;
+        var geocoder = null;
         function initMap() {
             if (typeof google !== 'undefined') {
                 try {
@@ -19,8 +27,9 @@
             }
         }
     </script>
-    <!-- COLE SUA CHAVE NOVA NA URL ABAIXO TAMBÉM SE FOR USAR MAPS -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCE8ksdjF15cj8IdFhXRwwvtvgFrZL2ZA4&libraries=places&callback=initMap" async defer></script>
+    <!-- MANTENHA A CHAVE DO MAPS AQUI SE TIVER UMA -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBH8bfRVa2L7tDKVfGZjKfp56zTsnIFWKw&libraries=places&callback=initMap" async defer></script>
+
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; color: #343a40; }
         .card-shadow { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05); }
@@ -37,26 +46,55 @@
         .file-badge { display: inline-flex; align-items: center; background-color: #eff6ff; color: #1e40af; padding: 6px 12px; border-radius: 8px; font-size: 0.85rem; border: 1px solid #dbeafe; max-width: 100%; }
         .action-btn { display: flex; align-items: center; justify-content: center; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; transition: all 0.2s; border: 1px solid transparent; }
         .action-btn-share { background-color: #f3f4f6; color: #4b5563; border-color: #e5e7eb; }
-        .action-btn-share:hover { background-color: #25D366; color: #fff; border-color: #25D366; }
+        .action-btn-share:hover { background-color: #25D366; color: #fff; border-color: #25D366; } /* Verde WhatsApp */
         .action-btn-pdf { background-color: #fff1f2; color: #e11d48; border-color: #fecdd3; }
         .action-btn-pdf:hover { background-color: #ffe4e6; color: #be123c; }
         .floating-pdf-btn { position: fixed; bottom: 2rem; right: 2rem; z-index: 50; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
         .loading-dots::after { content: ' .'; animation: dots 1.5s steps(5, end) infinite; }
         @keyframes dots { 0%, 20% { content: ' .'; } 40% { content: ' ..'; } 60% { content: ' ...'; } 80%, 100% { content: ''; } }
-        /* Clima Widget */
-        .weather-badge { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(4px); padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; color: #4b5563; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); display: inline-flex; align-items: center; gap: 8px; margin-top: 10px; border: 1px solid #e5e7eb; }
+        
+        /* Widget de Clima */
+        .weather-badge {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(4px);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            color: #4b5563;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            border: 1px solid #e5e7eb;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
+
+    <!-- Loader -->
     <div id="loading-spinner" class="hidden fixed inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center p-4 z-[100]">
         <div class="spinner rounded-full h-16 w-16 border-4 border-t-4 border-blue-500 border-opacity-50"></div>
         <p class="text-white mt-4 text-2xl font-bold tracking-widest lowercase">ddripping<span class="loading-dots"></span></p>
     </div>
-    <div id="system-instruction" style="display:none;">INSTRUÇÃO DO SISTEMA: AGENTE LOGÍSTICO DRIPP. I. DATAS: Se input sem data explícita, "startDate": null. Não assuma hoje. II. LOCALIZAÇÃO: Foque em "Hospedagem" e "Atividades". III. MULTIMODALIDADE: Analise TODOS os arquivos anexos. IV. JSON OBRIGATÓRIO.</div>
+
+    <!-- Instrução do Sistema -->
+    <div id="system-instruction" style="display:none;">
+INSTRUÇÃO DO SISTEMA: AGENTE LOGÍSTICO DRIPP
+I. DATAS: Se input sem data explícita, "startDate": null. Não assuma hoje.
+II. LOCALIZAÇÃO: Foque em "Hospedagem" e "Atividades". Não invente restaurantes.
+III. MULTIMODALIDADE: Analise TODOS os arquivos anexos em conjunto.
+IV. JSON OBRIGATÓRIO.
+    </div>
 
     <div id="app-container" class="container mx-auto max-w-4xl p-4 pb-32 flex-grow">
+        <!-- Tela 1: Input -->
         <div id="initial-view" class="flex flex-col items-center justify-center min-h-[60vh]">
-             <header class="text-center mb-8"><h1 class="text-6xl font-bold text-gray-800 tracking-tighter">ddripp</h1><p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook Interactive Page</p></header>
+             <header class="text-center mb-8">
+                <h1 class="text-6xl font-bold text-gray-800 tracking-tighter">ddripp</h1>
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook Interactive Page</p>
+            </header>
+            
             <div class="bg-white p-8 rounded-2xl card-shadow w-full relative max-w-2xl">
                 <p class="text-gray-400 mb-4 text-base text-center">Fale, escreva ou anexe comprovantes e roteiros.</p> 
                 <div class="relative">
@@ -72,6 +110,7 @@
             </div>
         </div>
 
+        <!-- Tela 2: Lacunas -->
         <div id="gap-filling-view" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
             <div class="bg-white p-8 rounded-2xl card-shadow w-full max-w-md text-center relative">
                 <h3 id="gap-question" class="font-bold text-xl mb-6 text-gray-800"></h3>
@@ -80,6 +119,7 @@
             </div>
         </div>
 
+        <!-- Tela 3: Seleção de Voo -->
         <div id="flight-selection-view" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
             <div class="bg-white p-6 rounded-2xl card-shadow w-full max-w-lg relative max-h-[80vh] flex flex-col">
                 <h3 class="font-bold text-xl mb-2 text-gray-800">Confirmação de Voo</h3>
@@ -90,28 +130,36 @@
             </div>
         </div>
 
+        <!-- Tela 4: Roteiro Rico -->
         <div id="itinerary-view" class="hidden bg-white p-4 rounded-2xl">
-            <!-- HEADER COM PREVIEW E CLIMA -->
+            <!-- HEADER COM PREVIEW REAL -->
             <header id="trip-header" class="mb-8 bg-gray-50 p-6 rounded-2xl card-shadow border-l-4 border-blue-500 relative overflow-hidden min-h-[220px] flex flex-col justify-end">
+                <!-- Imagem de Fundo (Carregada do Servidor) -->
                 <div id="header-bg-image" class="absolute inset-0 bg-cover bg-center z-0 transition-opacity duration-700" style="opacity: 0;"></div>
                 <div id="header-loader" class="absolute inset-0 flex items-center justify-center bg-gray-100 z-0">
                     <div class="animate-pulse flex space-x-2 text-gray-400 text-sm"><i class="fas fa-magic"></i><span>Gerando capa com IA...</span></div>
                 </div>
+                <!-- Gradiente para leitura -->
                 <div class="absolute inset-0 bg-gradient-to-t from-white via-white/70 to-transparent z-0"></div>
+                
                 <div class="relative z-10 mt-16">
                     <h2 id="trip-title" class="text-3xl font-bold text-gray-800 mb-2"></h2>
                     <div class="flex flex-wrap items-center gap-3 text-gray-600 mb-3">
                         <a id="trip-destination-link" href="#" target="_blank" class="flex items-center bg-white px-3 py-1 rounded-full text-sm shadow-sm hover:text-blue-600 border border-gray-200"><i class="fas fa-map-marker-alt mr-2 text-red-500"></i><span id="trip-destination"></span></a>
                         <div class="flex items-center bg-white px-3 py-1 rounded-full text-sm shadow-sm border border-gray-200"><i class="fas fa-calendar-alt mr-2 text-blue-500"></i><span id="trip-date-range"></span></div>
                     </div>
-                    <!-- Widget de Clima -->
-                    <div id="weather-widget" class="hidden weather-badge animate-fade-in-up"></div>
+                    
+                    <!-- WIDGET DE CLIMA -->
+                    <div id="weather-widget" class="hidden weather-badge animate-fade-in-up">
+                        <!-- Conteúdo injetado via JS -->
+                    </div>
                 </div>
             </header>
             <div id="itinerary-content" class="space-y-8"></div>
         </div>
     </div>
 
+    <!-- Rodapé Fixo (Edição & Ações) -->
     <div id="fixed-footer-input" class="hidden fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-40 no-print">
         <div class="container mx-auto max-w-2xl p-4">
             <div class="flex items-center gap-3 mb-2">
@@ -127,25 +175,35 @@
             </div>
         </div>
     </div>
+
+    <!-- Botão Flutuante (Read-Only) -->
     <button id="floating-pdf-btn" onclick="downloadPDF()" class="hidden floating-pdf-btn bg-red-600 text-white w-14 h-14 rounded-full flex items-center justify-center hover:bg-red-700 transition transform hover:scale-105 active:scale-95" title="Baixar PDF"><i class="fas fa-file-pdf text-xl"></i></button>
 
     <script>
         // =================================================================
-        // ⚠️ ATENÇÃO: GERE UMA CHAVE NOVA NO GOOGLE CLOUD E COLE AQUI
-        var GEMINI_API_KEY = "AIzaSyCE8ksdjF15cj8IdFhXRwwvtvgFrZL2ZA4"; 
+        // ⚠️ 1. COLE A SUA CHAVE DO FRONTEND (A RESTRITA) ABAIXO:
+        var GEMINI_API_KEY = "AIzaSyBH8bfRVa2L7tDKVfGZjKfp56zTsnIFWKw"; 
+        
         var MODELS_TO_TRY = ["gemini-2.0-flash", "gemini-1.5-flash"]; 
+
+        // ⚠️ 2. VERIFIQUE SE O LINK DO RENDER ESTÁ CERTO (SEM O /SHARE):
         var SERVER_SHARE_URL = "https://ddripp-server.onrender.com/share"; 
         // =================================================================
 
         var tripData = { origin: null, destination: null, startDate: null, returnDate: null, activities: [], title: '', tripObjective: '', weatherForecast: '', accommodation: null };
-        var missingInfoQueue = []; var selectedFlightActivityIndex = -1; var selectedFiles = []; var destinationImageUrl = "";
+        var missingInfoQueue = [];
+        var selectedFlightActivityIndex = -1; 
+        var selectedFiles = [];
+        var destinationImageUrl = "";
 
+        // --- INICIALIZAÇÃO ---
         window.onload = function() {
             const urlParams = new URLSearchParams(window.location.search);
             const encodedData = urlParams.get('data');
             if (encodedData) {
                 try {
-                    tripData = JSON.parse(decodeURIComponent(atob(encodedData)));
+                    var jsonStr = atob(encodedData);
+                    tripData = JSON.parse(decodeURIComponent(jsonStr));
                     renderReadOnlyView();
                 } catch (e) { console.error("Erro ao carregar roteiro", e); }
             }
@@ -161,27 +219,33 @@
             loadHeaderImage();
         }
 
-        // PREVIEW DE IMAGEM (CHAMA O SERVIDOR)
+        // --- CARREGAMENTO DE IMAGEM DO SERVIDOR (PREVIEW) ---
         function loadHeaderImage() {
             if (!SERVER_SHARE_URL) return;
+            
+            // Monta a URL da imagem dinâmica
             var dynamicImgUrl = SERVER_SHARE_URL.replace('/share', '/dynamic-cover') + `?dest=${encodeURIComponent(tripData.destination)}&date=${encodeURIComponent(tripData.startDate||'')}`;
+            
+            // Pré-carrega a imagem
             var img = new Image();
             img.onload = function() {
                 var headerBg = document.getElementById('header-bg-image');
                 headerBg.style.backgroundImage = `url('${dynamicImgUrl}')`;
-                headerBg.style.opacity = '0.9';
-                document.getElementById('header-loader').classList.add('hidden');
+                headerBg.style.opacity = '0.9'; // Revela a imagem
+                document.getElementById('header-loader').classList.add('hidden'); // Esconde loader
             };
             img.src = dynamicImgUrl;
         }
 
-        // CLIMA EM TEMPO REAL
+        // --- CLIMA EM TEMPO REAL (OPEN-METEO) ---
         function fetchWeather(destination) {
             if (!geocoder) return;
             geocoder.geocode({ 'address': destination }, function(results, status) {
                 if (status === 'OK' && results[0]) {
                     var lat = results[0].geometry.location.lat();
                     var lng = results[0].geometry.location.lng();
+                    
+                    // Busca Clima
                     fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto`)
                         .then(r => r.json())
                         .then(data => {
@@ -191,44 +255,73 @@
                                 var code = data.daily.weathercode[0];
                                 var icon = getWeatherIcon(code);
                                 var desc = getWeatherDesc(code);
+                                
                                 var widget = document.getElementById('weather-widget');
                                 widget.innerHTML = `${icon} <span class="font-bold text-gray-800">${max}° / ${min}°</span> <span class="text-xs text-gray-500 border-l pl-2 ml-1 border-gray-300">${desc}</span>`;
                                 widget.classList.remove('hidden');
                             }
                         })
-                        .catch(e => console.warn("Erro clima", e));
+                        .catch(e => console.warn("Erro ao buscar clima:", e));
                 }
             });
         }
+
         function getWeatherIcon(code) {
             if (code <= 1) return '<i class="fas fa-sun text-yellow-500 text-lg"></i>';
             if (code <= 3) return '<i class="fas fa-cloud-sun text-orange-400 text-lg"></i>';
+            if (code <= 48) return '<i class="fas fa-smog text-gray-400 text-lg"></i>';
             if (code <= 67) return '<i class="fas fa-cloud-rain text-blue-400 text-lg"></i>';
+            if (code <= 82) return '<i class="fas fa-cloud-showers-heavy text-blue-600 text-lg"></i>';
+            if (code <= 99) return '<i class="fas fa-bolt text-purple-500 text-lg"></i>';
             return '<i class="fas fa-cloud text-gray-400 text-lg"></i>';
         }
-        function getWeatherDesc(code) { return code <= 1 ? 'Ensolarado' : code <= 3 ? 'Nublado' : code <= 67 ? 'Chuvoso' : 'Instável'; }
+        
+        function getWeatherDesc(code) {
+            if (code <= 1) return 'Ensolarado';
+            if (code <= 3) return 'Parcialmente Nublado';
+            if (code <= 48) return 'Neblina';
+            if (code <= 67) return 'Chuvoso';
+            if (code <= 82) return 'Chuva Forte';
+            if (code <= 99) return 'Tempestade';
+            return 'Nublado';
+        }
 
-        // MANTIDOS IGUAIS AO ORIGINAL (UPLOAD, LLM, LOGIC)
+        // --- UPLOAD, LLM, CORE LOGIC (Mantidos) ---
         function handleFileSelect(input) {
-            var files = Array.from(input.files); if (!files.length) return;
-            Promise.all(files.map(f => new Promise((resolve, reject) => {
-                var reader = new FileReader(); reader.onload = e => resolve({ name: f.name, mimeType: f.type, data: e.target.result.split(',')[1] }); reader.onerror = reject; reader.readAsDataURL(f);
-            }))).then(results => { selectedFiles = selectedFiles.concat(results); renderFilePreviews(); input.value = ""; });
+            var files = Array.from(input.files);
+            if (!files.length) return;
+            var readPromises = files.map(file => new Promise((resolve, reject) => {
+                var reader = new FileReader();
+                reader.onload = e => resolve({ name: file.name, mimeType: file.type, data: e.target.result.split(',')[1] });
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            }));
+            Promise.all(readPromises).then(results => {
+                selectedFiles = selectedFiles.concat(results);
+                renderFilePreviews();
+                input.value = ""; 
+            });
         }
         function renderFilePreviews() {
-            var container = document.getElementById('file-preview-container'); container.innerHTML = '';
-            selectedFiles.length > 0 ? container.classList.remove('hidden') : container.classList.add('hidden');
-            selectedFiles.forEach((file, index) => { container.innerHTML += `<div class="file-badge"><i class="fas fa-file-alt mr-2 text-blue-500"></i><span class="mr-2 truncate max-w-[150px]">${file.name}</span><button onclick="removeFile(${index})" class="text-blue-400 hover:text-red-500"><i class="fas fa-times"></i></button></div>`; });
+            var container = document.getElementById('file-preview-container');
+            container.innerHTML = '';
+            if (selectedFiles.length > 0) container.classList.remove('hidden'); else container.classList.add('hidden');
+            selectedFiles.forEach((file, index) => {
+                container.innerHTML += `<div class="file-badge"><i class="fas fa-file-alt mr-2 text-blue-500"></i><span class="mr-2 truncate max-w-[150px]">${file.name}</span><button onclick="removeFile(${index})" class="text-blue-400 hover:text-red-500"><i class="fas fa-times"></i></button></div>`;
+            });
         }
         function removeFile(index) { selectedFiles.splice(index, 1); renderFilePreviews(); }
 
-        async function callGeminiSmart(parts, sys, schema) {
-            var payload = { contents: [{ parts: parts }], systemInstruction: { parts: [{ text: sys }] }, generationConfig: { responseMimeType: "application/json" } };
-            if (schema) payload.generationConfig.responseSchema = schema;
+        async function callGeminiSmart(userContentParts, systemInstructionText, responseSchema) {
+            var payload = { contents: [{ parts: userContentParts }], systemInstruction: { parts: [{ text: systemInstructionText }] }, generationConfig: { responseMimeType: "application/json" } };
+            if (responseSchema) payload.generationConfig.responseSchema = responseSchema;
             for (var i = 0; i < MODELS_TO_TRY.length; i++) {
                 try {
                     var response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + MODELS_TO_TRY[i] + ":generateContent?key=" + GEMINI_API_KEY, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                    if (response.ok) { var res = await response.json(); return schema ? JSON.parse(res.candidates[0].content.parts[0].text) : res.candidates[0].content.parts[0].text; }
+                    if (response.ok) {
+                        var result = await response.json();
+                        return responseSchema ? JSON.parse(result.candidates[0].content.parts[0].text) : result.candidates[0].content.parts[0].text;
+                    }
                 } catch (e) { console.warn(e); }
             }
             throw new Error("Falha na IA.");
@@ -238,39 +331,107 @@
             var inputVal = document.getElementById('initial-input').value;
             if (!inputVal && selectedFiles.length === 0) return alert('Por favor, diga algo ou anexe um arquivo.');
             document.getElementById('loading-spinner').classList.remove('hidden');
+
             var schema = { type: "OBJECT", properties: { "missingCriticalInfo": { "type": "STRING" }, "tripObjective": { "type": "STRING" }, "origin": { "type": "STRING" }, "destination": { "type": "STRING" }, "startDate": { "type": "STRING" }, "returnDate": { "type": "STRING" }, "accommodation": { "type": "STRING" }, "activities": { "type": "ARRAY", "items": { "type": "OBJECT", "properties": { "date": { "type": "STRING" }, "time": { "type": "STRING" }, "person": { "type": "STRING" }, "description": { "type": "STRING" }, "location": { "type": "STRING" }, "type": { "type": "STRING", "enum": ["travel", "commitment", "meal", "leisure", "free_time"] }, "transport": { "type": "STRING" }, "flightNumber": { "type": "STRING" }, "airline": { "type": "STRING" }, "originAirport": { "type": "STRING" }, "destinationAirport": { "type": "STRING" }, "flightDurationMinutes": { "type": "INTEGER" }, "flightOptions": { "type": "ARRAY", "items": { "type": "OBJECT", "properties": { "airline": {"type": "STRING"}, "flightNumber": {"type": "STRING"}, "time": {"type": "STRING"}, "origin": {"type": "STRING"}, "destination": {"type": "STRING"}, "durationMinutes": {"type": "INTEGER"} } } } }, "required": ["date", "time", "description", "type"] } } }, "required": ["activities", "tripObjective"] };
+            
             var textPrompt = "[HOJE]: " + new Date().toLocaleDateString('pt-BR') + "\n[INPUT]: " + (inputVal || "Analise os arquivos.");
-            var parts = []; selectedFiles.forEach(f => parts.push({ inline_data: { mime_type: f.mimeType, data: f.data } })); parts.push({ text: textPrompt });
+            var parts = [];
+            selectedFiles.forEach(f => parts.push({ inline_data: { mime_type: f.mimeType, data: f.data } }));
+            parts.push({ text: textPrompt });
+
             try {
                 var result = await callGeminiSmart(parts, document.getElementById('system-instruction').innerText, schema);
                 tripData = { ...tripData, ...result };
                 if(!tripData.activities) tripData.activities = [];
                 selectedFiles = []; renderFilePreviews();
+
                 if (!tripData.startDate) { missingInfoQueue.push({ key: 'startDate', q: "Qual a data de início (Dia/Mês)?", type: 'date' }); window.askNext(); return; }
                 if (checkFlightClarification()) return;
+
                 await fillGeographicGaps();
                 document.getElementById('loading-spinner').classList.add('hidden');
-                if (tripData.missingCriticalInfo && !tripData.destination) { missingInfoQueue.push({ key: 'gap_fill', q: tripData.missingCriticalInfo || "Qual o destino?", type: 'text' }); window.askNext(); } else { window.generateItinerary(); }
+                
+                if (tripData.missingCriticalInfo && !tripData.destination) {
+                    missingInfoQueue.push({ key: 'gap_fill', q: tripData.missingCriticalInfo || "Qual o destino?", type: 'text' }); window.askNext();
+                } else {
+                    window.generateItinerary();
+                }
             } catch (e) { document.getElementById('loading-spinner').classList.add('hidden'); alert("Erro: " + e.message); }
         }
 
-        async function fillGeographicGaps() { tripData.activities.sort((a,b) => parseDate(a.date) - parseDate(b.date) || a.time.localeCompare(b.time)); }
+        async function fillGeographicGaps() {
+             tripData.activities.sort((a,b) => parseDate(a.date) - parseDate(b.date) || a.time.localeCompare(b.time));
+        }
         function parseDate(d) { if(!d) return new Date(9e15); var p=d.split('/'); return new Date(p[2]||2025, (p[1]||1)-1, p[0]); }
-        function checkFlightClarification() { var idx = tripData.activities.findIndex(a => a.type === 'travel' && a.flightOptions?.length > 0); if (idx !== -1) { selectedFlightActivityIndex = idx; openFlightModal(tripData.activities[idx].flightOptions); return true; } return false; }
-        function openFlightModal(opts) { var l = document.getElementById('flight-options-list'); l.innerHTML = ''; opts.forEach((o,i) => l.innerHTML += `<div onclick="selFlight(${i})" class="border p-3 rounded cursor-pointer hover:bg-blue-50 mb-2"><b>${o.airline} ${o.flightNumber}</b><br><small>${o.origin} (${o.time}) ➝ ${o.destination}</small></div>`); document.getElementById('initial-view').classList.add('hidden'); document.getElementById('flight-selection-view').classList.remove('hidden'); document.getElementById('loading-spinner').classList.add('hidden'); }
-        window.selFlight = function(i) { var act = tripData.activities[selectedFlightActivityIndex]; var o = act.flightOptions[i]; Object.assign(act, {time: o.time, airline: o.airline, flightNumber: o.flightNumber, originAirport: o.origin, destinationAirport: o.destination, flightDurationMinutes: o.durationMinutes}); delete act.flightOptions; document.getElementById('flight-selection-view').classList.add('hidden'); document.getElementById('loading-spinner').classList.remove('hidden'); if(!checkFlightClarification()) handleInitialInput(); }
-        window.askNext = function() { var q = missingInfoQueue[0]; document.getElementById('gap-question').textContent = q.q; document.getElementById('gap-input').type = q.type === 'date' ? 'date' : 'text'; document.getElementById('initial-view').classList.add('hidden'); document.getElementById('gap-filling-view').classList.remove('hidden'); document.getElementById('loading-spinner').classList.add('hidden'); }
-        window.handleGapInput = function() { var v = document.getElementById('gap-input').value; if(!v) return; if (document.getElementById('gap-input').type === 'date') v = v.split('-').reverse().join('/'); if (missingInfoQueue[0].key !== 'gap_fill') tripData[missingInfoQueue[0].key] = v; missingInfoQueue.shift(); if(missingInfoQueue.length) window.askNext(); else { document.getElementById('gap-filling-view').classList.add('hidden'); handleInitialInput(); } }
-        window.generateItinerary = function() { loadHeaderImage(); fetchWeather(tripData.destination); document.getElementById('initial-view').classList.add('hidden'); document.getElementById('itinerary-view').classList.remove('hidden'); document.getElementById('fixed-footer-input').classList.remove('hidden'); renderItineraryContent(); }
-        function renderItineraryContent() { document.getElementById('trip-title').textContent = tripData.tripObjective || "Viagem"; document.getElementById('trip-destination').textContent = tripData.destination; document.getElementById('trip-date-range').textContent = (tripData.startDate||"") + " - " + (tripData.returnDate||""); var c = document.getElementById('itinerary-content'); c.innerHTML = ''; var days = {}; tripData.activities.forEach(a => { if(!days[a.date]) days[a.date]=[]; days[a.date].push(a); }); Object.keys(days).sort((a,b)=>parseDate(a)-parseDate(b)).forEach(d => { c.innerHTML += `<h3 class="sticky-header text-lg font-bold text-blue-800 border-b mb-4 bg-[#f8f9fa] py-2">${d}</h3>` + days[d].map(a => `<div class="itinerary-grid bg-white border-b"><div class="font-bold">${a.time}</div><div class="text-xs bg-gray-100 p-1 rounded text-center">${a.person||'Todos'}</div><div><div class="font-medium">${a.description}</div><div class="text-xs text-gray-500">${a.location||''}</div></div></div>`).join(''); }); }
+        function checkFlightClarification() {
+            var idx = tripData.activities.findIndex(a => a.type === 'travel' && a.flightOptions?.length > 0);
+            if (idx !== -1) { selectedFlightActivityIndex = idx; openFlightModal(tripData.activities[idx].flightOptions); return true; }
+            return false;
+        }
+        function openFlightModal(opts) {
+             var l = document.getElementById('flight-options-list'); l.innerHTML = '';
+             opts.forEach((o,i) => l.innerHTML += `<div onclick="selFlight(${i})" class="border p-3 rounded cursor-pointer hover:bg-blue-50 mb-2"><b>${o.airline} ${o.flightNumber}</b><br><small>${o.origin} (${o.time}) ➝ ${o.destination}</small></div>`);
+             document.getElementById('initial-view').classList.add('hidden'); document.getElementById('flight-selection-view').classList.remove('hidden'); document.getElementById('loading-spinner').classList.add('hidden');
+        }
+        window.selFlight = function(i) {
+             var act = tripData.activities[selectedFlightActivityIndex]; var o = act.flightOptions[i];
+             Object.assign(act, {time: o.time, airline: o.airline, flightNumber: o.flightNumber, originAirport: o.origin, destinationAirport: o.destination, flightDurationMinutes: o.durationMinutes});
+             delete act.flightOptions; document.getElementById('flight-selection-view').classList.add('hidden'); document.getElementById('loading-spinner').classList.remove('hidden');
+             if(!checkFlightClarification()) handleInitialInput(); 
+        }
+        window.askNext = function() {
+            var q = missingInfoQueue[0];
+            document.getElementById('gap-question').textContent = q.q;
+            document.getElementById('gap-input').type = q.type === 'date' ? 'date' : 'text';
+            document.getElementById('initial-view').classList.add('hidden');
+            document.getElementById('gap-filling-view').classList.remove('hidden');
+            document.getElementById('loading-spinner').classList.add('hidden');
+        }
+        window.handleGapInput = function() {
+            var v = document.getElementById('gap-input').value; if(!v) return;
+            if (document.getElementById('gap-input').type === 'date') v = v.split('-').reverse().join('/');
+            if (missingInfoQueue[0].key !== 'gap_fill') tripData[missingInfoQueue[0].key] = v;
+            missingInfoQueue.shift();
+            if(missingInfoQueue.length) window.askNext(); else { document.getElementById('gap-filling-view').classList.add('hidden'); handleInitialInput(); }
+        }
+        window.generateItinerary = function() {
+            loadHeaderImage(); 
+            fetchWeather(tripData.destination);
+            
+            document.getElementById('initial-view').classList.add('hidden');
+            document.getElementById('itinerary-view').classList.remove('hidden');
+            document.getElementById('fixed-footer-input').classList.remove('hidden');
+            
+            renderItineraryContent();
+        }
+        function renderItineraryContent() {
+             document.getElementById('trip-title').textContent = tripData.tripObjective || "Viagem";
+             document.getElementById('trip-destination').textContent = tripData.destination;
+             document.getElementById('trip-date-range').textContent = (tripData.startDate||"") + " - " + (tripData.returnDate||"");
+             var c = document.getElementById('itinerary-content'); c.innerHTML = '';
+             var days = {}; tripData.activities.forEach(a => { if(!days[a.date]) days[a.date]=[]; days[a.date].push(a); });
+             Object.keys(days).sort((a,b)=>parseDate(a)-parseDate(b)).forEach(d => {
+                 c.innerHTML += `<h3 class="sticky-header text-lg font-bold text-blue-800 border-b mb-4 bg-[#f8f9fa] py-2">${d}</h3>` + 
+                 days[d].map(a => `<div class="itinerary-grid bg-white border-b"><div class="font-bold">${a.time}</div><div class="text-xs bg-gray-100 p-1 rounded text-center">${a.person||'Todos'}</div><div><div class="font-medium">${a.description}</div><div class="text-xs text-gray-500">${a.location||''}</div></div></div>`).join('');
+             });
+        }
 
         window.shareTrip = function() { 
-            var jsonStr = encodeURIComponent(JSON.stringify(tripData)); var base64Data = btoa(jsonStr);
-            var finalShareUrl = SERVER_SHARE_URL.includes("SEU-LINK") ? window.location.href.split('?')[0] + "?data=" + base64Data : `${SERVER_SHARE_URL}?title=${encodeURIComponent(tripData.tripObjective)}&dest=${encodeURIComponent(tripData.destination)}&date=${encodeURIComponent(tripData.startDate)}&img=${encodeURIComponent(destinationImageUrl)}&data=${base64Data}`;
+            var jsonStr = encodeURIComponent(JSON.stringify(tripData));
+            var base64Data = btoa(jsonStr);
+            var finalShareUrl = SERVER_SHARE_URL.includes("SEU-LINK") ? 
+                                window.location.href.split('?')[0] + "?data=" + base64Data : 
+                                `${SERVER_SHARE_URL}?title=${encodeURIComponent(tripData.tripObjective)}&dest=${encodeURIComponent(tripData.destination)}&date=${encodeURIComponent(tripData.startDate)}&img=${encodeURIComponent(destinationImageUrl)}&data=${base64Data}`;
+            
             var text = `*${tripData.tripObjective}* ✈️\n\n🗓️ ${tripData.startDate} a ${tripData.returnDate}\n📍 ${tripData.destination}\n\n👇 *Toque no cartão abaixo para ver o roteiro completo:*\n${finalShareUrl}`;
             window.open("https://api.whatsapp.com/send?text=" + encodeURIComponent(text)); 
         }
-        window.toggleVoice = function(id) { if (!('webkitSpeechRecognition' in window)) return alert("Use Chrome."); var r = new webkitSpeechRecognition(); r.lang = "pt-BR"; r.onresult = e => document.getElementById(id).value += " " + e.results[0][0].transcript; r.start(); }
+        window.toggleVoice = function(id) { 
+             if (!('webkitSpeechRecognition' in window)) return alert("Use Chrome.");
+             var r = new webkitSpeechRecognition(); r.lang = "pt-BR";
+             r.onresult = e => document.getElementById(id).value += " " + e.results[0][0].transcript;
+             r.start();
+        }
         window.downloadPDF = function() { alert("Gerar PDF"); }
         window.handleAdjustmentInput = function() { alert("Ajuste em breve!"); }
     </script>
