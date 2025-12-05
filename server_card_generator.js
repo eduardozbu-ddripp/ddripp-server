@@ -19,17 +19,16 @@ const THEME = {
 // Cache simples em memória
 const backgroundCache = new Map();
 
-// --- FUNÇÃO DE GERAÇÃO OTIMIZADA PARA AI STUDIO ---
+// --- FUNÇÃO DE GERAÇÃO COM SELEÇÃO DE MODELO ---
 async function tryGenerateImage(prompt, modelId) {
     if (!GOOGLE_API_KEY) throw new Error("Chave API não configurada no Render.");
 
-    // Endpoint leve do Google AI Studio (não é Vertex AI)
+    // Endpoint leve do Google AI Studio
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:predict?key=${GOOGLE_API_KEY}`;
     
     console.log(`🎨 Tentando gerar com ${modelId}: "${prompt}"...`);
 
     const payload = {
-        // Formato específico para a API generativelanguage
         instances: [{ prompt: `High quality travel photography of ${prompt}, cinematic lighting, 8k resolution, photorealistic, landscape` }],
         parameters: { sampleCount: 1, aspectRatio: "16:9" }
     };
