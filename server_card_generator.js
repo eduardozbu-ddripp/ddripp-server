@@ -4,20 +4,33 @@ const fetch = require('node-fetch');
 const app = express();
 
 const PORT = process.env.PORT || 3000;
-// Pega a chave do cofre do Render
+
+// O servidor busca a chave no cofre do Render (Environment Variable)
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY; 
 
+const THEME = {
+    fontMain: 'bold 70px sans-serif',
+    fontDate: '30px sans-serif',
+    colorText: '#ffffff',
+    overlayColor: 'rgba(0, 0, 0, 0.5)', 
+    logoText: 'ddripp' 
+};
+
+// Cache simples em memória
 const backgroundCache = new Map();
 
-// --- FUNÇÃO DE GERAÇÃO COM RETENTATIVA ---
-async function tryGenerateImage(prompt, modelVersion) {
-    // modelVersion pode ser 'imagen-3.0-generate-001' ou 'image-generation-002'
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelVersion}:predict?key=${GOOGLE_API_KEY}`;
+// --- FUNÇÃO DE GERAÇÃO OTIMIZADA PARA AI STUDIO ---
+async function tryGenerateImage(prompt, modelId) {
+    if (!GOOGLE_API_KEY) throw new Error("Chave API não configurada no Render.");
+
+    // Endpoint leve do Google AI Studio (não é Vertex AI)
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:predict?key=${GOOGLE_API_KEY}`;
     
-    console.log(`🎨 Tentando gerar com modelo: ${modelVersion}...`);
+    console.log(`🎨 Tentando gerar com ${modelId}: "${prompt}"...`);
 
     const payload = {
-        instances: [{ prompt: `High quality travel photography of ${prompt}, cinematic lighting, 8k, landscape` }],
+        // Formato específico para a API generativelanguage
+        instances: [{ prompt: `High quality travel photography of ${prompt}, cinematic lighting, 8k resolution, photorealistic, landscape` }],
         parameters: { sampleCount: 1, aspectRatio: "16:9" }
     };
 
@@ -28,14 +41,18 @@ async function tryGenerateImage(prompt, modelVersion) {
     });
 
     if (!response.ok) {
-        throw new Error(await response.text());
+        const errText = await response.text();
+        throw new Error(`API recusou (${response.status}): ${errText}`);
     }
 
     const data = await response.json();
+    
+    // Verifica se a imagem veio (estrutura padrão do Imagen)
     if (data.predictions && data.predictions[0]?.bytesBase64Encoded) {
         return Buffer.from(data.predictions[0].bytesBase64Encoded, 'base64');
     }
-    throw new Error("API respondeu mas sem imagem.");
+    
+    throw new Error("API respondeu OK, mas sem dados de imagem.");
 }
 
 app.get('/dynamic-cover', async (req, res) => {
@@ -49,72 +66,76 @@ app.get('/dynamic-cover', async (req, res) => {
         const canvas = createCanvas(width, height);
         const ctx = canvas.getContext('2d');
 
-        // 1. TENTA OBTER A IMAGEM
-        const cacheKey = `img_dual_${destination.toLowerCase()}`;
+        // Cache Key baseada no destino
+        const cacheKey = `img_v3_${destination.toLowerCase()}`;
         let image;
 
+        // 1. TENTA CACHE
         if (backgroundCache.has(cacheKey)) {
             console.log(`⚡ Cache Hit: ${destination}`);
             image = await loadImage(backgroundCache.get(cacheKey));
         } else {
+            // 2. TENTA GERAÇÃO (Primary -> Fast -> Fallback)
             let imgBuffer;
             try {
-                // TENTATIVA A: Imagen 3 (Mais moderno)
+                // Prioridade: Imagen 3.0 Standard
                 imgBuffer = await tryGenerateImage(destination, 'imagen-3.0-generate-001');
-            } catch (erro3) {
-                console.warn("⚠️ Imagen 3 falhou. Tentando Imagen 2...", erro3.message);
+            } catch (erroPrimary) {
+                console.warn(`⚠️ Primary falhou: ${erroPrimary.message}. Tentando Fast...`);
                 try {
-                    // TENTATIVA B: Imagen 2 (Mais compatível)
-                    // Nota: O endpoint antigo às vezes chama 'image-generation-002'
-                    imgBuffer = await tryGenerateImage(destination, 'image-generation-002');
-                } catch (erro2) {
-                    console.error("❌ Imagen 2 também falhou:", erro2.message);
+                    // Alternativa: Imagen 3.0 Fast
+                    imgBuffer = await tryGenerateImage(destination, 'imagen-3.0-fast-generate-001');
+                } catch (erroFast) {
+                    console.error(`❌ Fast também falhou: ${erroFast.message}. Usando Gradiente.`);
                     
-                    // FALLBACK FINAL: Desenha um fundo colorido se nenhuma IA funcionar
-                    // Isso evita o erro 500 e mostra o card pelo menos com texto
+                    // Último recurso: Gradiente (Zero erro 500)
                     const fallbackCanvas = createCanvas(width, height);
                     const fCtx = fallbackCanvas.getContext('2d');
-                    // Gradiente elegante
                     const grd = fCtx.createLinearGradient(0, 0, width, height);
-                    grd.addColorStop(0, "#1e3a8a");
-                    grd.addColorStop(1, "#3b82f6");
+                    grd.addColorStop(0, "#0f172a"); // Slate 900
+                    grd.addColorStop(1, "#334155"); // Slate 700
                     fCtx.fillStyle = grd;
                     fCtx.fillRect(0, 0, width, height);
-                    image = fallbackCanvas; 
+                    image = fallbackCanvas;
                 }
             }
 
+            // Se conseguiu gerar buffer, carrega e salva no cache
             if (imgBuffer) {
                 backgroundCache.set(cacheKey, imgBuffer);
                 image = await loadImage(imgBuffer);
             }
         }
 
-        // Se imagem for nula (fallback de cor já tratou acima, mas garantindo)
+        // Se imagem for nula (caso extremo), garante o gradiente
         if (!image) {
              const fallbackCanvas = createCanvas(width, height);
              const fCtx = fallbackCanvas.getContext('2d');
-             fCtx.fillStyle = "#1e3a8a";
+             fCtx.fillStyle = "#1e293b";
              fCtx.fillRect(0,0,width,height);
              image = fallbackCanvas;
         }
 
-        // 2. DESENHA
+        // 3. DESENHA A IMAGEM
         ctx.drawImage(image, 0, 0, width, height);
 
-        // 3. APLICA TEXTO (Identidade)
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        // 4. APLICA A IDENTIDADE DDRIPP
+        // Overlay escuro para leitura
+        ctx.fillStyle = THEME.overlayColor;
         ctx.fillRect(0, 0, width, height);
 
+        // Logo
         ctx.fillStyle = '#3B82F6'; 
         ctx.font = 'bold 40px sans-serif';
         ctx.fillText('ddripp', 50, 80);
 
-        ctx.fillStyle = '#ffffff';
+        // Texto Central (Destino)
+        ctx.fillStyle = THEME.colorText;
         ctx.textAlign = 'center';
         
         let fontSize = 70;
         ctx.font = `bold ${fontSize}px sans-serif`;
+        // Reduz fonte se o nome for muito grande
         while (ctx.measureText(destination.toUpperCase()).width > width - 100 && fontSize > 30) {
             fontSize -= 5;
             ctx.font = `bold ${fontSize}px sans-serif`;
@@ -122,32 +143,45 @@ app.get('/dynamic-cover', async (req, res) => {
         
         ctx.fillText(destination.toUpperCase(), width / 2, height / 2);
 
-        ctx.font = '30px sans-serif';
+        // Data
+        ctx.font = THEME.fontDate;
         ctx.fillText(`📅 ${dateText}`, width / 2, (height / 2) + 60);
 
+        // Rodapé discreto
+        ctx.font = 'italic 20px sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.fillText('Roteiro Personalizado via Gemini', width / 2, height - 40);
+
+        // Envia
         res.set('Content-Type', 'image/png');
         canvas.createPNGStream().pipe(res);
 
     } catch (error) {
-        console.error("ERRO CRÍTICO:", error);
-        // Resposta de emergência para não quebrar o zap
-        res.status(200).send("Erro, mas o servidor vive.");
+        console.error("ERRO CRÍTICO NO RENDER:", error);
+        // Resposta simples de texto para debug se tudo explodir
+        res.status(200).send("Erro ao gerar imagem, mas servidor online.");
     }
 });
 
+// Rota de Compartilhamento
 app.get('/share', (req, res) => {
     const { title, date, dest, data } = req.query;
     const pageTitle = title || 'Roteiro';
+    
+    // Constrói URL da imagem dinâmica
     const protocol = req.headers['x-forwarded-proto'] || req.protocol;
     const host = req.get('host');
     const imgUrl = `${protocol}://${host}/dynamic-cover?dest=${encodeURIComponent(dest||'')}&date=${encodeURIComponent(date||'')}`;
-    const APP_URL = "https://eduardozbu-ddripp.github.io/ddripp-server/"; 
+    
+    // URL do seu Frontend (Site)
+    const APP_URL = "https://eduardozbu-ddripp.github.io/ddripp-server/";
 
     const html = `
     <!DOCTYPE html>
     <html lang="pt-BR">
     <head>
         <meta charset="UTF-8">
+        <meta property="og:site_name" content="ddripp">
         <meta property="og:title" content="${pageTitle}">
         <meta property="og:description" content="Confira o roteiro de viagem para ${dest}">
         <meta property="og:image" content="${imgUrl}">
@@ -155,13 +189,15 @@ app.get('/share', (req, res) => {
         <meta property="og:image:height" content="630">
         <meta name="twitter:card" content="summary_large_image">
         <title>${pageTitle}</title>
+        <style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;background:#f0f9ff;color:#0c4a6e}</style>
     </head>
     <body>
-        <h2>Carregando...</h2>
-        <script>window.location.href = "${APP_URL}?data=${data}";</script>
+        <h2>Redirecionando para o roteiro...</h2>
+        <script>setTimeout(() => { window.location.href = "${APP_URL}?data=${data}"; }, 100);</script>
     </body>
     </html>`;
+    
     res.send(html);
 });
 
-app.listen(PORT, () => console.log(`Servidor Duplo rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log(`Servidor Imagen 3 rodando na porta ${PORT}`));
