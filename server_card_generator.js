@@ -20,7 +20,7 @@ const THEME = {
 
 const backgroundCache = new Map();
 
-// --- FUNÇÃO DE ARTE (MAPA TOPOGRÁFICO) ---
+// --- FUNÇÃO DE ARTE (FALLBACK) ---
 function drawTopographicPattern(ctx, width, height, errorMessage = null) {
     const grd = ctx.createLinearGradient(0, 0, width, height);
     grd.addColorStop(0, "#1e293b"); 
@@ -51,39 +51,52 @@ function drawTopographicPattern(ctx, width, height, errorMessage = null) {
     }
 }
 
+// --- AUTENTICAÇÃO VERTEX AI (CORRIGIDA) ---
 async function getAccessToken() {
     if (!CREDENTIALS_JSON) throw new Error("Variável CREDENTIALS_JSON vazia.");
     
+    let credentialsObj;
     try {
-        // Limpeza agressiva de quebras de linha para evitar travamento do JSON.parse
-        const cleanJson = CREDENTIALS_JSON.replace(/\\n/g, '\n');
-        const credentialsObj = JSON.parse(cleanJson);
-        
-        const auth = new GoogleAuth({
-            credentials: credentialsObj,
-            scopes: 'https://www.googleapis.com/auth/cloud-platform'
-        });
-        
-        const client = await auth.getClient();
-        const token = await client.getAccessToken();
-        return token.token;
+        // TENTATIVA 1: Parse direto (O jeito padrão)
+        credentialsObj = JSON.parse(CREDENTIALS_JSON);
     } catch (e) {
-        throw new Error(`Erro Auth: ${e.message}`);
+        // Se falhar, tenta uma limpeza leve de espaços extras apenas nas pontas
+        try {
+            credentialsObj = JSON.parse(CREDENTIALS_JSON.trim());
+        } catch (e2) {
+             throw new Error(`JSON Inválido: ${e.message}`);
+        }
     }
+
+    // CORREÇÃO DA CHAVE PRIVADA (O jeito certo de fazer)
+    // O JSON do Google vem com "\n" literais na chave privada. 
+    // Algumas bibliotecas precisam que isso vire quebra de linha real, mas SÓ DEPOIS do parse.
+    if (credentialsObj.private_key) {
+        credentialsObj.private_key = credentialsObj.private_key.replace(/\\n/g, '\n');
+    }
+
+    const auth = new GoogleAuth({
+        credentials: credentialsObj,
+        scopes: 'https://www.googleapis.com/auth/cloud-platform'
+    });
+    
+    const client = await auth.getClient();
+    const token = await client.getAccessToken();
+    return token.token;
 }
 
-// --- GERAÇÃO VERTEX AI COM TIMEOUT ---
+// --- GERAÇÃO VERTEX AI ---
 async function generateImageVertex(prompt) {
     console.log(`🎨 Vertex AI: "${prompt}"...`);
     
-    // Timeout de 10 segundos para não travar o servidor
+    // Timeout de segurança (15s)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     try {
         const accessToken = await getAccessToken();
         const location = 'us-central1'; 
-        const modelId = 'imagegeneration@006'; 
+        const modelId = 'imagegeneration@006'; // Modelo V2
         
         const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${location}/publishers/google/models/${modelId}:predict`;
 
@@ -99,15 +112,16 @@ async function generateImageVertex(prompt) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(payload),
-            signal: controller.signal // Liga o timer
+            signal: controller.signal
         });
 
-        clearTimeout(timeoutId); // Desliga o timer se respondeu
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
             const errText = await response.text();
             try {
                 const errJson = JSON.parse(errText);
+                // Captura erro específico de cota ou permissão
                 throw new Error(`Google: ${errJson.error.message}`);
             } catch(e) {
                 throw new Error(`Google HTTP ${response.status}: ${errText.substring(0, 100)}`);
@@ -122,9 +136,7 @@ async function generateImageVertex(prompt) {
 
     } catch (error) {
         clearTimeout(timeoutId);
-        if (error.name === 'AbortError') {
-            throw new Error("Google demorou demais (Timeout).");
-        }
+        if (error.name === 'AbortError') throw new Error("Google demorou demais (Timeout).");
         throw error;
     }
 }
@@ -140,7 +152,7 @@ app.get('/dynamic-cover', async (req, res) => {
         const canvas = createCanvas(width, height);
         const ctx = canvas.getContext('2d');
 
-        const cacheKey = `vtx_safe_${destination.toLowerCase()}`;
+        const cacheKey = `vtx_final_${destination.toLowerCase()}`;
         let image;
         let lastError = null;
 
@@ -206,5 +218,5 @@ app.get('/share', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Servidor Anti-Travamento rodando na porta ${PORT}`);
+    console.log(`Servidor Corrigido rodando na porta ${PORT}`);
 });
