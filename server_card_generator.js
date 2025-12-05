@@ -22,6 +22,7 @@ const backgroundCache = new Map();
 
 // --- FUNÇÃO DE ARTE (FALLBACK) ---
 function drawTopographicPattern(ctx, width, height, errorMessage = null) {
+    console.log("🎨 Desenhando fallback (padrão topográfico)...");
     const grd = ctx.createLinearGradient(0, 0, width, height);
     grd.addColorStop(0, "#1e293b"); 
     grd.addColorStop(1, "#0f172a"); 
@@ -53,6 +54,7 @@ function drawTopographicPattern(ctx, width, height, errorMessage = null) {
 
 // --- AUTENTICAÇÃO VERTEX AI (CORRIGIDA) ---
 async function getAccessToken() {
+    console.log("🔑 Iniciando autenticação...");
     if (!CREDENTIALS_JSON) throw new Error("Variável CREDENTIALS_JSON vazia.");
     
     let credentialsObj;
@@ -82,16 +84,20 @@ async function getAccessToken() {
     
     const client = await auth.getClient();
     const token = await client.getAccessToken();
+    console.log("🔑 Token de acesso obtido com sucesso.");
     return token.token;
 }
 
 // --- GERAÇÃO VERTEX AI ---
 async function generateImageVertex(prompt) {
-    console.log(`🎨 Vertex AI: "${prompt}"...`);
+    console.log(`🚀 Vertex AI: Iniciando pedido para "${prompt}"...`);
     
-    // Timeout de segurança (15s)
+    // Timeout de segurança REDUZIDO para 8s (para testar se destrava)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const timeoutId = setTimeout(() => {
+        console.log("⏱️ Timeout! O Google demorou demais, abortando...");
+        controller.abort();
+    }, 8000);
 
     try {
         const accessToken = await getAccessToken();
@@ -105,6 +111,7 @@ async function generateImageVertex(prompt) {
             parameters: { sampleCount: 1, aspectRatio: "16:9" }
         };
 
+        console.log("📡 Enviando requisição fetch para o Google...");
         const response = await fetch(url, {
             method: 'POST',
             headers: {
@@ -116,13 +123,14 @@ async function generateImageVertex(prompt) {
         });
 
         clearTimeout(timeoutId);
+        console.log(`📡 Resposta do Google recebida. Status: ${response.status}`);
 
         if (!response.ok) {
             const errText = await response.text();
             try {
                 const errJson = JSON.parse(errText);
                 // Captura erro específico de cota ou permissão
-                throw new Error(`Google: ${errJson.error.message}`);
+                throw new Error(`Google Error: ${errJson.error.message}`);
             } catch(e) {
                 throw new Error(`Google HTTP ${response.status}: ${errText.substring(0, 100)}`);
             }
@@ -130,18 +138,24 @@ async function generateImageVertex(prompt) {
 
         const data = await response.json();
         if (data.predictions && data.predictions[0]?.bytesBase64Encoded) {
+            console.log("✅ Imagem recebida e decodificada!");
             return Buffer.from(data.predictions[0].bytesBase64Encoded, 'base64');
         }
         throw new Error("Sem dados de imagem.");
 
     } catch (error) {
         clearTimeout(timeoutId);
-        if (error.name === 'AbortError') throw new Error("Google demorou demais (Timeout).");
+        if (error.name === 'AbortError') {
+            console.error("❌ Erro: Timeout (Google demorou muito)");
+            throw new Error("Google demorou demais (Timeout).");
+        }
+        console.error("❌ Erro no generateImageVertex:", error.message);
         throw error;
     }
 }
 
 app.get('/dynamic-cover', async (req, res) => {
+    console.log("📥 Recebida requisição /dynamic-cover");
     try {
         const { dest, date } = req.query;
         const destination = dest || 'Viagem';
@@ -149,6 +163,7 @@ app.get('/dynamic-cover', async (req, res) => {
 
         const width = 1200;
         const height = 630;
+        console.log("🖌️ Criando Canvas...");
         const canvas = createCanvas(width, height);
         const ctx = canvas.getContext('2d');
 
@@ -165,7 +180,7 @@ app.get('/dynamic-cover', async (req, res) => {
                 backgroundCache.set(cacheKey, imgBuffer);
                 image = await loadImage(imgBuffer);
             } catch (erroVertex) {
-                console.error("❌ Falha Vertex:", erroVertex.message);
+                console.error("⚠️ Falha na IA, usando fallback. Motivo:", erroVertex.message);
                 lastError = erroVertex.message; 
                 drawTopographicPattern(ctx, width, height, lastError);
             }
@@ -200,10 +215,11 @@ app.get('/dynamic-cover', async (req, res) => {
         ctx.fillText(`📅 ${dateText}`, width / 2, (height / 2) + 60);
 
         res.set('Content-Type', 'image/png');
+        console.log("📤 Enviando imagem final...");
         canvas.createPNGStream().pipe(res);
 
     } catch (error) {
-        console.error("ERRO FATAL:", error);
+        console.error("🔥 ERRO FATAL no endpoint:", error);
         res.status(200).send(`Erro Crítico: ${error.message}`);
     }
 });
@@ -218,5 +234,5 @@ app.get('/share', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Servidor Corrigido rodando na porta ${PORT}`);
+    console.log(`Servidor de Diagnóstico rodando na porta ${PORT}`);
 });
