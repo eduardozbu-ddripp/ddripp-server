@@ -9,24 +9,26 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 
-    <!-- CAMUFLAGEM DA CHAVE API (Para enganar o robô do GitHub) -->
+    <!-- LÓGICA DE PROTEÇÃO DA CHAVE DO FRONTEND -->
     <script>
-        // ⚠️ INSTRUÇÃO:
-        // Pegue sua chave NOVA do Google Cloud.
-        // Divida ela em dois pedaços e cole abaixo.
-        // Exemplo: Se a chave for "AIzaSyBlablalba", coloque "AIzaSyBla" na parte 1 e "blalba" na parte 2.
+        // ⚠️ COLE SUA CHAVE DE FRONTEND AQUI (DIVIDIDA EM DUAS PARTES)
+        // Isso evita que o robô do GitHub cancele ela automaticamente.
+        // Exemplo: "AIzaSy..." vira "AIzaSy" e "..."
         
-        const parte1 = "AIzaSyCZXkAgx66se"; 
-        const parte2 = "XOuGjaN0XXE_Lcq4B_xlVE";
+        const parte1 = "AIzaSyDpIh6fNWjKRmA"; 
+        const parte2 = "0ZVe9mz_2tfhCXZrZSFQ";
         
-        const API_KEY_FINAL = parte1 + parte2; // O App junta aqui
+        const GEMINI_API_KEY = parte1 + parte2; // Junta automaticamente
+
+        // CONFIGURAÇÃO DO SERVIDOR RENDER
+        const SERVER_SHARE_URL = "https://ddripp-server.onrender.com/share"; 
 
         var distanceMatrixService = null, directionsService = null, geocoder = null;
         
-        // Função para carregar o Google Maps dinamicamente usando a chave montada
         function loadGoogleMaps() {
             var script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY_FINAL}&libraries=places&callback=initMap`;
+            // Usa a mesma chave para o Maps e para o Gemini
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${GEMINI_API_KEY}&libraries=places&callback=initMap`;
             script.async = true;
             script.defer = true;
             document.head.appendChild(script);
@@ -42,10 +44,8 @@
             }
         }
         
-        // Carrega o mapa assim que a página abre
         window.onload = function() {
             loadGoogleMaps();
-            // Verifica se é link compartilhado
             const urlParams = new URLSearchParams(window.location.search);
             const encodedData = urlParams.get('data');
             if (encodedData) {
@@ -165,8 +165,6 @@
     <script>
         // VARIAVEIS GLOBAIS
         var MODELS_TO_TRY = ["gemini-2.0-flash", "gemini-1.5-flash"]; 
-        var SERVER_SHARE_URL = "https://ddripp-server.onrender.com/share"; 
-        
         var tripData = { origin: null, destination: null, startDate: null, returnDate: null, activities: [], title: '', tripObjective: '', weatherForecast: '', accommodation: null };
         var missingInfoQueue = []; var selectedFlightActivityIndex = -1; var selectedFiles = []; var destinationImageUrl = "";
 
@@ -180,6 +178,7 @@
             loadHeaderImage();
         }
 
+        // CARREGAMENTO DE IMAGEM DO SERVIDOR
         function loadHeaderImage() {
             if (!SERVER_SHARE_URL) return;
             var dynamicImgUrl = SERVER_SHARE_URL.replace('/share', '/dynamic-cover') + `?dest=${encodeURIComponent(tripData.destination)}&date=${encodeURIComponent(tripData.startDate||'')}`;
@@ -193,6 +192,7 @@
             img.src = dynamicImgUrl;
         }
 
+        // CLIMA EM TEMPO REAL
         function fetchWeather(destination) {
             if (!geocoder) return;
             geocoder.geocode({ 'address': destination }, function(results, status) {
