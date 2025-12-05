@@ -20,16 +20,14 @@ const THEME = {
 
 const backgroundCache = new Map();
 
-// --- FUNÇÃO DE ARTE COM DIAGNÓSTICO DE ERRO ---
+// --- FUNÇÃO DE ARTE (MAPA TOPOGRÁFICO) ---
 function drawTopographicPattern(ctx, width, height, errorMessage = null) {
-    // Fundo
     const grd = ctx.createLinearGradient(0, 0, width, height);
     grd.addColorStop(0, "#1e293b"); 
     grd.addColorStop(1, "#0f172a"); 
     ctx.fillStyle = grd;
     ctx.fillRect(0, 0, width, height);
 
-    // Padrão Topográfico
     ctx.lineWidth = 2;
     ctx.strokeStyle = "rgba(255, 255, 255, 0.05)"; 
     for (let i = 0; i < 15; i++) {
@@ -43,46 +41,24 @@ function drawTopographicPattern(ctx, width, height, errorMessage = null) {
         ctx.stroke();
     }
 
-    // SE TIVER ERRO, ESCREVE NA TELA (DEBUG)
     if (errorMessage) {
         ctx.fillStyle = "rgba(255, 0, 0, 0.8)";
-        ctx.fillRect(0, 0, width, 60); // Barra vermelha no topo
-        
+        ctx.fillRect(0, 0, width, 60); 
         ctx.fillStyle = "#ffffff";
         ctx.font = "bold 20px monospace";
         ctx.textAlign = "left";
-        ctx.fillText(`ERRO TÉCNICO: ${errorMessage.substring(0, 90)}`, 20, 35);
-        console.error("ERRO IMPRESSO NA IMAGEM:", errorMessage);
+        ctx.fillText(`ERRO: ${errorMessage.substring(0, 80)}`, 20, 35);
     }
 }
 
-// --- AUTENTICAÇÃO VERTEX AI (COM LIMPEZA ROBUSTA DE JSON) ---
 async function getAccessToken() {
     if (!CREDENTIALS_JSON) throw new Error("Variável CREDENTIALS_JSON vazia.");
     
-    let credentialsObj;
-
     try {
-        // TENTATIVA 1: Parse direto
-        credentialsObj = JSON.parse(CREDENTIALS_JSON);
-    } catch (e1) {
-        console.log("⚠️ JSON sujo detectado. Tentando limpar...");
-        try {
-            // TENTATIVA 2: Limpeza de Caracteres de Controle
-            // Remove quebras de linha reais (\n) que o copy-paste pode ter inserido indevidamente
-            // e substitui por espaços, exceto se parecerem essenciais.
-            // A estratégia mais segura para chaves do Google é remover quebras de linha fora das strings.
-            
-            // Remove todos os newlines e carriage returns
-            const sanitized = CREDENTIALS_JSON.replace(/[\r\n]+/g, '');
-            credentialsObj = JSON.parse(sanitized);
-            console.log("✅ JSON limpo com sucesso.");
-        } catch (e2) {
-            throw new Error(`Falha fatal ao ler JSON das credenciais: ${e1.message}`);
-        }
-    }
-
-    try {
+        // Limpeza agressiva de quebras de linha para evitar travamento do JSON.parse
+        const cleanJson = CREDENTIALS_JSON.replace(/\\n/g, '\n');
+        const credentialsObj = JSON.parse(cleanJson);
+        
         const auth = new GoogleAuth({
             credentials: credentialsObj,
             scopes: 'https://www.googleapis.com/auth/cloud-platform'
@@ -92,52 +68,65 @@ async function getAccessToken() {
         const token = await client.getAccessToken();
         return token.token;
     } catch (e) {
-        throw new Error(`Erro de Autenticação Google: ${e.message}`);
+        throw new Error(`Erro Auth: ${e.message}`);
     }
 }
 
-// --- GERAÇÃO VERTEX AI ---
+// --- GERAÇÃO VERTEX AI COM TIMEOUT ---
 async function generateImageVertex(prompt) {
     console.log(`🎨 Vertex AI: "${prompt}"...`);
     
-    const accessToken = await getAccessToken();
-    const location = 'us-central1'; 
-    const modelId = 'imagegeneration@006'; // Modelo V2 Estável
-    
-    const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${location}/publishers/google/models/${modelId}:predict`;
+    // Timeout de 10 segundos para não travar o servidor
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-    const payload = {
-        instances: [{ prompt: `High quality travel photography of ${prompt}, cinematic lighting, 8k, landscape` }],
-        parameters: { sampleCount: 1, aspectRatio: "16:9" }
-    };
+    try {
+        const accessToken = await getAccessToken();
+        const location = 'us-central1'; 
+        const modelId = 'imagegeneration@006'; 
+        
+        const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${location}/publishers/google/models/${modelId}:predict`;
 
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-    });
+        const payload = {
+            instances: [{ prompt: `High quality travel photography of ${prompt}, cinematic lighting, 8k, landscape` }],
+            parameters: { sampleCount: 1, aspectRatio: "16:9" }
+        };
 
-    if (!response.ok) {
-        const errText = await response.text();
-        // Tenta extrair mensagem de erro limpa do JSON do Google
-        try {
-            const errJson = JSON.parse(errText);
-            throw new Error(`Google: ${errJson.error.message}`);
-        } catch(e) {
-            throw new Error(`Google HTTP ${response.status}: ${errText.substring(0, 100)}`);
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload),
+            signal: controller.signal // Liga o timer
+        });
+
+        clearTimeout(timeoutId); // Desliga o timer se respondeu
+
+        if (!response.ok) {
+            const errText = await response.text();
+            try {
+                const errJson = JSON.parse(errText);
+                throw new Error(`Google: ${errJson.error.message}`);
+            } catch(e) {
+                throw new Error(`Google HTTP ${response.status}: ${errText.substring(0, 100)}`);
+            }
         }
-    }
 
-    const data = await response.json();
-    
-    if (data.predictions && data.predictions[0]?.bytesBase64Encoded) {
-        return Buffer.from(data.predictions[0].bytesBase64Encoded, 'base64');
+        const data = await response.json();
+        if (data.predictions && data.predictions[0]?.bytesBase64Encoded) {
+            return Buffer.from(data.predictions[0].bytesBase64Encoded, 'base64');
+        }
+        throw new Error("Sem dados de imagem.");
+
+    } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+            throw new Error("Google demorou demais (Timeout).");
+        }
+        throw error;
     }
-    
-    throw new Error("Vertex respondeu sem dados de imagem.");
 }
 
 app.get('/dynamic-cover', async (req, res) => {
@@ -151,7 +140,7 @@ app.get('/dynamic-cover', async (req, res) => {
         const canvas = createCanvas(width, height);
         const ctx = canvas.getContext('2d');
 
-        const cacheKey = `vtx_clean_${destination.toLowerCase()}`;
+        const cacheKey = `vtx_safe_${destination.toLowerCase()}`;
         let image;
         let lastError = null;
 
@@ -165,7 +154,7 @@ app.get('/dynamic-cover', async (req, res) => {
                 image = await loadImage(imgBuffer);
             } catch (erroVertex) {
                 console.error("❌ Falha Vertex:", erroVertex.message);
-                lastError = erroVertex.message; // Guarda o erro para escrever na tela
+                lastError = erroVertex.message; 
                 drawTopographicPattern(ctx, width, height, lastError);
             }
         }
@@ -173,11 +162,10 @@ app.get('/dynamic-cover', async (req, res) => {
         if (image) {
             ctx.drawImage(image, 0, 0, width, height);
         } else if (!lastError) {
-            // Se não tem imagem e não tem erro capturado, desenha padrão
-            drawTopographicPattern(ctx, width, height, "Erro desconhecido na geração");
+            drawTopographicPattern(ctx, width, height, "Erro desconhecido");
         }
 
-        // Camada de Identidade
+        // Identidade
         ctx.fillStyle = THEME.overlayColor;
         ctx.fillRect(0, 0, width, height);
 
@@ -203,8 +191,7 @@ app.get('/dynamic-cover', async (req, res) => {
         canvas.createPNGStream().pipe(res);
 
     } catch (error) {
-        console.error("ERRO FATAL 500:", error);
-        // Tenta enviar uma imagem de erro mesmo no 500
+        console.error("ERRO FATAL:", error);
         res.status(200).send(`Erro Crítico: ${error.message}`);
     }
 });
@@ -219,5 +206,5 @@ app.get('/share', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Servidor Diagnóstico rodando na porta ${PORT}`);
+    console.log(`Servidor Anti-Travamento rodando na porta ${PORT}`);
 });
