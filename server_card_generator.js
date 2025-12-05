@@ -40,8 +40,8 @@ async function generateImageVertex(prompt) {
     console.log(`🎨 Conectando ao Vertex AI para: "${prompt}"...`);
     
     const accessToken = await getAccessToken();
-    const location = 'us-central1'; // Região padrão do Vertex
-    // Usando 'imagegeneration@006' (Imagen 2) que é o padrão estável no Vertex
+    const location = 'us-central1'; 
+    // Usando o modelo estável do Vertex
     const modelId = 'imagegeneration@006'; 
     
     const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${location}/publishers/google/models/${modelId}:predict`;
@@ -67,7 +67,6 @@ async function generateImageVertex(prompt) {
 
     const data = await response.json();
     
-    // O Vertex retorna em uma estrutura um pouco diferente dependendo da versão
     if (data.predictions && data.predictions[0]?.bytesBase64Encoded) {
         return Buffer.from(data.predictions[0].bytesBase64Encoded, 'base64');
     }
@@ -93,17 +92,19 @@ app.get('/dynamic-cover', async (req, res) => {
             console.log(`⚡ Cache Hit: ${destination}`);
             image = await loadImage(backgroundCache.get(cacheKey));
         } else {
-            // Tenta gerar com Vertex AI
             try {
                 const imgBuffer = await generateImageVertex(destination);
                 backgroundCache.set(cacheKey, imgBuffer);
                 image = await loadImage(imgBuffer);
             } catch (erroVertex) {
                 console.error("❌ Falha no Vertex AI:", erroVertex.message);
-                // Fallback Gradiente (sempre seguro)
+                // Fallback Seguro (Gradiente)
                 const fallbackCanvas = createCanvas(width, height);
                 const fCtx = fallbackCanvas.getContext('2d');
-                fCtx.fillStyle = "#1e293b";
+                const grd = fCtx.createLinearGradient(0, 0, width, height);
+                grd.addColorStop(0, "#1e293b"); 
+                grd.addColorStop(1, "#0f172a"); 
+                fCtx.fillStyle = grd;
                 fCtx.fillRect(0,0,width,height);
                 image = fallbackCanvas;
             }
@@ -117,10 +118,8 @@ app.get('/dynamic-cover', async (req, res) => {
              image = fallbackCanvas;
         }
 
-        // Desenha
         ctx.drawImage(image, 0, 0, width, height);
         
-        // Identidade Visual
         ctx.fillStyle = THEME.overlayColor;
         ctx.fillRect(0, 0, width, height);
 
@@ -147,18 +146,21 @@ app.get('/dynamic-cover', async (req, res) => {
 
     } catch (error) {
         console.error("ERRO GERAL:", error);
-        res.status(500).send("Erro interno");
+        res.status(200).send("Erro interno (Fallback Ativo)");
     }
 });
 
-// Rota de Compartilhamento (igual)
+// Rota de Compartilhamento
 app.get('/share', (req, res) => {
     const { title, date, dest, data } = req.query;
     const pageTitle = title || 'Roteiro';
     const protocol = req.headers['x-forwarded-proto'] || req.protocol;
     const host = req.get('host');
     const imgUrl = `${protocol}://${host}/dynamic-cover?dest=${encodeURIComponent(dest||'')}&date=${encodeURIComponent(date||'')}`;
+    
+    // SEU SITE NO GITHUB PAGES
     const APP_URL = "https://eduardozbu-ddripp.github.io/ddripp-server/";
+
     const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta property="og:site_name" content="ddripp"><meta property="og:title" content="${pageTitle}"><meta property="og:description" content="Confira o roteiro para ${dest}"><meta property="og:image" content="${imgUrl}"><meta name="twitter:card" content="summary_large_image"><title>${pageTitle}</title><style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;background:#f0f9ff;color:#0c4a6e}</style></head><body><h2>Carregando...</h2><script>setTimeout(() => { window.location.href = "${APP_URL}?data=${data}"; }, 100);</script></body></html>`;
     res.send(html);
 });
