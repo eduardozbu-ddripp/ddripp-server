@@ -215,8 +215,12 @@ app.get('/dynamic-cover', async (req, res) => {
         ctx.fillText(`📅 ${dateText}`, width / 2, (height / 2) + 60);
 
         res.set('Content-Type', 'image/png');
-        console.log("📤 Enviando imagem final...");
-        canvas.createPNGStream().pipe(res);
+        console.log("📤 Gerando buffer da imagem...");
+        
+        // MUDANÇA AQUI: Em vez de 'pipe' (stream), usamos buffer direto para garantir envio completo
+        const buffer = canvas.toBuffer('image/png');
+        console.log(`📤 Enviando imagem final (${buffer.length} bytes)...`);
+        res.send(buffer);
 
     } catch (error) {
         console.error("🔥 ERRO FATAL no endpoint:", error);
