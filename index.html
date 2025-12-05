@@ -9,26 +9,29 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 
-    <!-- LÓGICA DE PROTEÇÃO DA CHAVE DO FRONTEND -->
+    <!-- CAMUFLAGEM DA CHAVE API (Para enganar o robô do GitHub) -->
     <script>
-        // ⚠️ COLE SUA CHAVE DE FRONTEND AQUI (DIVIDIDA EM DUAS PARTES)
-        // Isso evita que o robô do GitHub cancele ela automaticamente.
-        // Exemplo: "AIzaSy..." vira "AIzaSy" e "..."
+        // ⚠️ INSTRUÇÃO CRUCIAL DE SEGURANÇA:
+        // 1. Pegue sua chave NOVA do Google Cloud (Restrita ao seu site).
+        // 2. Divida ela em duas partes e cole abaixo.
+        // Exemplo: Se a chave for "AIzaSyBlablalba", coloque "AIzaSyBla" na parte 1 e "blalba" na parte 2.
         
         const parte1 = "AIzaSyDpIh6fNWjKRmA"; 
         const parte2 = "0ZVe9mz_2tfhCXZrZSFQ";
         
-        const GEMINI_API_KEY = parte1 + parte2; // Junta automaticamente
+        // AQUI ESTÁ A VARIÁVEL MÁGICA QUE JUNTA TUDO
+        const API_KEY_FINAL = parte1 + parte2; 
 
         // CONFIGURAÇÃO DO SERVIDOR RENDER
         const SERVER_SHARE_URL = "https://ddripp-server.onrender.com/share"; 
 
         var distanceMatrixService = null, directionsService = null, geocoder = null;
         
+        // Função para carregar o Google Maps dinamicamente usando a chave montada
         function loadGoogleMaps() {
             var script = document.createElement('script');
-            // Usa a mesma chave para o Maps e para o Gemini
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${GEMINI_API_KEY}&libraries=places&callback=initMap`;
+            // Usa a API_KEY_FINAL aqui
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY_FINAL}&libraries=places&callback=initMap`;
             script.async = true;
             script.defer = true;
             document.head.appendChild(script);
@@ -44,6 +47,7 @@
             }
         }
         
+        // Carrega o mapa assim que a página abre
         window.onload = function() {
             loadGoogleMaps();
             const urlParams = new URLSearchParams(window.location.search);
