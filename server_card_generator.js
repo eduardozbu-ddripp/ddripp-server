@@ -56,16 +56,33 @@ function drawTopographicPattern(ctx, width, height, errorMessage = null) {
     }
 }
 
-// --- AUTENTICAÇÃO VERTEX AI (COM LIMPEZA DE JSON) ---
+// --- AUTENTICAÇÃO VERTEX AI (COM LIMPEZA ROBUSTA DE JSON) ---
 async function getAccessToken() {
     if (!CREDENTIALS_JSON) throw new Error("Variável CREDENTIALS_JSON vazia.");
     
+    let credentialsObj;
+
     try {
-        // Limpeza: O Render às vezes coloca quebras de linha literais (\n) que quebram o JSON
-        // Essa linha corrige isso antes de tentar ler.
-        const cleanJson = CREDENTIALS_JSON.replace(/\\n/g, '\n');
-        const credentialsObj = JSON.parse(cleanJson);
-        
+        // TENTATIVA 1: Parse direto
+        credentialsObj = JSON.parse(CREDENTIALS_JSON);
+    } catch (e1) {
+        console.log("⚠️ JSON sujo detectado. Tentando limpar...");
+        try {
+            // TENTATIVA 2: Limpeza de Caracteres de Controle
+            // Remove quebras de linha reais (\n) que o copy-paste pode ter inserido indevidamente
+            // e substitui por espaços, exceto se parecerem essenciais.
+            // A estratégia mais segura para chaves do Google é remover quebras de linha fora das strings.
+            
+            // Remove todos os newlines e carriage returns
+            const sanitized = CREDENTIALS_JSON.replace(/[\r\n]+/g, '');
+            credentialsObj = JSON.parse(sanitized);
+            console.log("✅ JSON limpo com sucesso.");
+        } catch (e2) {
+            throw new Error(`Falha fatal ao ler JSON das credenciais: ${e1.message}`);
+        }
+    }
+
+    try {
         const auth = new GoogleAuth({
             credentials: credentialsObj,
             scopes: 'https://www.googleapis.com/auth/cloud-platform'
@@ -75,7 +92,7 @@ async function getAccessToken() {
         const token = await client.getAccessToken();
         return token.token;
     } catch (e) {
-        throw new Error(`JSON Inválido: ${e.message}`);
+        throw new Error(`Erro de Autenticação Google: ${e.message}`);
     }
 }
 
@@ -134,7 +151,7 @@ app.get('/dynamic-cover', async (req, res) => {
         const canvas = createCanvas(width, height);
         const ctx = canvas.getContext('2d');
 
-        const cacheKey = `vtx_debug_${destination.toLowerCase()}`;
+        const cacheKey = `vtx_clean_${destination.toLowerCase()}`;
         let image;
         let lastError = null;
 
