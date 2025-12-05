@@ -9,28 +9,22 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 
-    <!-- CAMUFLAGEM DA CHAVE API (Para enganar o robô do GitHub) -->
+    <!-- CONFIGURAÇÃO GLOBAL (Var garante que todos vejam) -->
     <script>
-        // ⚠️ INSTRUÇÃO CRUCIAL DE SEGURANÇA:
-        // 1. Pegue sua chave NOVA do Google Cloud (Restrita ao seu site).
-        // 2. Divida ela em duas partes e cole abaixo.
-        // Exemplo: Se a chave for "AIzaSyBlablalba", coloque "AIzaSyBla" na parte 1 e "blalba" na parte 2.
+        // ⚠️ COLE SUA CHAVE DO GOOGLE CLOUD (FRONTEND) AQUI
+        var parte1 = "AIzaSyDpIh6fNWjKRmA0"; 
+        var parte2 = "ZVe9mz_2tfhCXZrZSFQ";
         
-        const parte1 = "AIzaSyDpIh6fNWjKRmA"; 
-        const parte2 = "0ZVe9mz_2tfhCXZrZSFQ";
-        
-        // AQUI ESTÁ A VARIÁVEL MÁGICA QUE JUNTA TUDO
-        const API_KEY_FINAL = parte1 + parte2; 
+        // Variável GLOBAL (disponível para todo o código)
+        var API_KEY_FINAL = parte1 + parte2; 
 
         // CONFIGURAÇÃO DO SERVIDOR RENDER
-        const SERVER_SHARE_URL = "https://ddripp-server.onrender.com/share"; 
+        var SERVER_SHARE_URL = "https://ddripp-server.onrender.com/share"; 
 
         var distanceMatrixService = null, directionsService = null, geocoder = null;
         
-        // Função para carregar o Google Maps dinamicamente usando a chave montada
         function loadGoogleMaps() {
             var script = document.createElement('script');
-            // Usa a API_KEY_FINAL aqui
             script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY_FINAL}&libraries=places&callback=initMap`;
             script.async = true;
             script.defer = true;
@@ -47,7 +41,6 @@
             }
         }
         
-        // Carrega o mapa assim que a página abre
         window.onload = function() {
             loadGoogleMaps();
             const urlParams = new URLSearchParams(window.location.search);
