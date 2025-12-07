@@ -15,19 +15,13 @@
     <!-- Fontes -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 
-    <!-- Google Maps (Com proteção contra erros de carregamento) -->
+    <!-- Google Maps - Carregamento Assíncrono com Bibliotecas -->
     <script>
-        window.initMap = function() { console.log("Google Maps carregado."); }
-        var distanceMatrixService = null;
-        window.onload = function() {
-             if (typeof google !== 'undefined' && google.maps) {
-                try { distanceMatrixService = new google.maps.DistanceMatrixService(); } 
-                catch(e) { console.warn("Maps Service Error (Distance):", e); }
-             }
-        }
+        (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
+            key: "AIzaSyAEG18G07ql90WhbJ5hkpLoC7NYTTk-ESs", // Sua chave do Maps (Frontend)
+            v: "weekly",
+        });
     </script>
-    <!-- Adicionei v=weekly para estabilidade -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAEG18G07ql90WhbJ5hkpLoC7NYTTk-ESs&libraries=places&v=weekly&callback=initMap" async defer></script>
 
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; color: #343a40; }
@@ -72,6 +66,14 @@
 
         /* ARQUIVOS */
         .file-badge { display: inline-flex; align-items: center; background-color: #eff6ff; color: #1e40af; padding: 4px 10px; border-radius: 16px; font-size: 0.8rem; border: 1px solid #dbeafe; margin-right: 5px; margin-bottom: 5px;}
+        
+        /* Novo Autocomplete */
+        gmp-place-autocomplete input {
+            padding: 1rem !important;
+            border-radius: 0.75rem !important;
+            border: 1px solid #e5e7eb !important;
+            width: 100%;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -89,7 +91,7 @@
         <div id="initial-view" class="flex flex-col items-center justify-center min-h-[60vh]">
              <header class="text-center mb-8">
                 <h1 class="text-6xl font-bold text-gray-800 tracking-tighter">ddripp</h1>
-                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V8 (Model Fix)</p>
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V10 (New Maps)</p>
             </header>
             
             <div class="bg-white p-8 rounded-2xl card-shadow w-full relative max-w-2xl">
@@ -98,7 +100,7 @@
                 <div class="relative">
                     <textarea id="initial-input" rows="6" class="w-full p-4 pr-24 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition resize-none text-lg mt-2" placeholder="Clique no microfone ou anexe arquivos..."></textarea>
                     
-                    <!-- BOTÕES DE INPUT (RESTAURADOS) -->
+                    <!-- BOTÕES DE INPUT -->
                     <div class="absolute right-3 bottom-3 flex gap-2">
                         <button onclick="document.getElementById('file-upload').click()" class="p-2 text-gray-400 hover:text-blue-600 transition rounded-full hover:bg-gray-100" title="Anexar Arquivo">
                             <i class="fas fa-paperclip text-xl"></i>
@@ -125,7 +127,13 @@
         <div id="gap-filling-view" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
             <div class="bg-white p-8 rounded-2xl card-shadow w-full max-w-md text-center relative">
                 <h3 id="gap-question" class="font-bold text-xl mb-6 text-gray-800"></h3>
+                
+                <!-- Container para o Novo Autocomplete do Maps -->
+                <div id="place-autocomplete-container" class="hidden mb-6 w-full"></div>
+                
+                <!-- Input Padrão (Texto/Data) -->
                 <input type="text" id="gap-input" class="w-full p-4 border border-gray-300 rounded-xl mb-6 text-lg focus:outline-none focus:border-blue-500 transition" placeholder="Sua resposta...">
+                
                 <button onclick="handleGapInput()" class="w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-xl hover:bg-blue-700 transition">Confirmar</button>
             </div>
         </div>
@@ -192,7 +200,7 @@
     
     <script>
         // =================================================================
-        // CONFIGURAÇÃO SEGURA DA CHAVE API (Chave trocada para a do ddripp2ok)
+        // CONFIGURAÇÃO SEGURA DA CHAVE API (Gemini)
         var KEY_PART_1 = "AIzaSyDpIh6fNWjKRmA0Z"; 
         var KEY_PART_2 = "Ve9mz_2tfhCXZrZSFQ"; 
         var GEMINI_API_KEY = KEY_PART_1 + KEY_PART_2; 
@@ -200,18 +208,15 @@
         var SERVER_SHARE_URL = "https://ddripp-server.onrender.com/share"; 
         // =================================================================
 
-        // LISTA DE MODELOS ATUALIZADA (Sua sugestão)
-        // O código vai tentar um por um até conseguir
-        var MODELS_TO_TRY = ["gemini-2.0-flash-exp", "gemini-1.5-flash", "gemini-1.5-flash-latest"]; 
-        
+        var MODELS_TO_TRY = ["gemini-1.5-flash"]; 
         var tripData = { origin: null, destination: null, startDate: null, returnDate: null, activities: [], title: '', tripObjective: '', weatherForecast: '', accommodation: null };
         var missingInfoQueue = [];
-        var autocomplete;
+        // var autocomplete; // REMOVIDO: Usaremos o novo elemento
         var selectedFlightActivityIndex = -1; 
         var selectedTransportActivityIndex = -1;
-        var selectedFiles = []; // Array para guardar os arquivos
+        var selectedFiles = []; 
 
-        // --- UPLOAD E VISUALIZAÇÃO DE ARQUIVOS (RESTAURADO) ---
+        // --- UPLOAD E VISUALIZAÇÃO ---
         function handleFileSelect(input) {
             var files = Array.from(input.files);
             if (!files.length) return;
@@ -280,21 +285,18 @@
         function showLoader(msg) { document.getElementById('loading-message').textContent = msg; document.getElementById('loading-spinner').classList.remove('hidden'); }
         function hideLoader() { document.getElementById('loading-spinner').classList.add('hidden'); }
 
-        // --- LLM CALL (COM RETRY AUTOMÁTICO) ---
+        // --- LLM CALL ---
         async function callGeminiSmart(promptText, responseSchema) {
-            // Cria o payload base
             var payload = { 
-                contents: [{ parts: [] }], // Começa vazio para adicionar texto e imagens
+                contents: [{ parts: [] }], 
                 generationConfig: { responseMimeType: "application/json" } 
             };
 
-            // Adiciona arquivos se houver
             if (selectedFiles.length > 0) {
                 selectedFiles.forEach(f => {
                     payload.contents[0].parts.push({ inline_data: { mime_type: f.mimeType, data: f.data } });
                 });
             }
-            // Adiciona o texto por último
             payload.contents[0].parts.push({ text: promptText });
 
             if (responseSchema) payload.generationConfig.responseSchema = responseSchema;
@@ -303,14 +305,11 @@
                 var model = MODELS_TO_TRY[i];
                 var url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + GEMINI_API_KEY;
                 try {
-                    console.log("Tentando modelo:", model);
                     var response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                     if (response.ok) {
                         var result = await response.json();
                         var text = result.candidates?.[0]?.content?.parts?.[0]?.text;
                         return responseSchema ? JSON.parse(text) : text;
-                    } else {
-                        console.warn(`Falha no modelo ${model}:`, response.status);
                     }
                 } catch (e) { console.warn(e); }
             }
@@ -422,7 +421,6 @@
         async function handleInitialInput() {
             var inputEl = document.getElementById('initial-input');
             var inputVal = inputEl.value;
-            // Validação mais branda: permite se tiver arquivo, mesmo sem texto
             if ((!inputVal || inputVal.trim() === "") && selectedFiles.length === 0) return alert('Por favor, diga algo ou anexe um arquivo.');
             
             showLoader('A planear logística...');
@@ -520,23 +518,21 @@
             }
         }
 
-        // --- CÉREBRO DA CADEIA LOGÍSTICA (RESTAURADO) ---
+        // --- CÉREBRO DA CADEIA LOGÍSTICA ---
         function fillGeographicGaps() {
             tripData.activities.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
             var newActivities = [];
             var lastKnownLocation = tripData.accommodation || tripData.origin || null;
-            var isFirstTransfer = true; 
-
+            
             for (var i = 0; i < tripData.activities.length; i++) {
                 var curr = tripData.activities[i];
                 
-                // 1. CADEIA AÉREA: VOO -> TRANSFER
+                // 1. CADEIA AÉREA
                 if (curr.type === 'travel' && curr.destinationAirport && curr.flightNumber) {
                     newActivities.push(curr); 
                     
                     var arrivalTime = addTime(curr.time, curr.flightDurationMinutes || 120);
                     var transferStart = addTime(arrivalTime, 30); 
-                    
                     var nextLocation = tripData.accommodation || null;
                     
                     if (i < tripData.activities.length - 1) {
@@ -567,7 +563,6 @@
                     } else {
                         lastKnownLocation = curr.destinationAirport;
                     }
-                    isFirstTransfer = false;
                     continue;
                 }
 
@@ -602,32 +597,58 @@
             else generateItinerary();
         }
 
+        // --- NOVO: ASK NEXT COM AUTOCOMPLETE DO GOOGLE MAPS ---
         function askNext() {
             var q = missingInfoQueue[0];
             document.getElementById('gap-question').textContent = q.q;
             var input = document.getElementById('gap-input');
             input.value = '';
             
-            // Fix Autocomplete (Proteção contra erro de conta nova)
-            if (autocomplete) { try { google.maps.event.clearInstanceListeners(input); } catch(e){} }
-            
-            if (q.type === 'location' && typeof google !== 'undefined' && google.maps && google.maps.places) {
-                input.type = 'text';
-                try { autocomplete = new google.maps.places.Autocomplete(input); } 
-                catch(e) { console.warn("Autocomplete error", e); }
+            // Se for LOCALIZAÇÃO, usamos o novo PlaceAutocompleteElement
+            if (q.type === 'location') {
+                document.getElementById('gap-input').classList.add('hidden');
+                var container = document.getElementById('place-autocomplete-container');
+                container.innerHTML = ''; // Limpa anterior
+                container.classList.remove('hidden');
+
+                // Importa a biblioteca e cria o elemento
+                google.maps.importLibrary("places").then(({ PlaceAutocompleteElement }) => {
+                    const autocomplete = new PlaceAutocompleteElement();
+                    autocomplete.placeholder = "Digite a cidade ou local...";
+                    container.appendChild(autocomplete);
+
+                    autocomplete.addEventListener("gmp-places-select", async ({ place }) => {
+                        await place.fetchFields({ fields: ["displayName", "formattedAddress"] });
+                        const val = place.formattedAddress || place.displayName;
+                        // Joga o valor no input escondido para a função handleGapInput pegar
+                        input.value = val;
+                    });
+                }).catch(e => {
+                    console.warn("Erro ao carregar Novo Places API:", e);
+                    // Fallback se der erro no import
+                    document.getElementById('gap-input').classList.remove('hidden');
+                    document.getElementById('place-autocomplete-container').classList.add('hidden');
+                });
+
             } else if (q.type === 'date') {
                 input.type = 'date';
+                document.getElementById('gap-input').classList.remove('hidden');
+                document.getElementById('place-autocomplete-container').classList.add('hidden');
             } else {
                 input.type = 'text';
+                document.getElementById('gap-input').classList.remove('hidden');
+                document.getElementById('place-autocomplete-container').classList.add('hidden');
             }
+            
             document.getElementById('gap-filling-view').classList.remove('hidden');
             document.getElementById('initial-view').classList.add('hidden');
-            input.focus();
+            if(q.type !== 'location') input.focus();
         }
 
         function handleGapInput() {
             var val = document.getElementById('gap-input').value;
-            if (!val) return alert('Responda por favor.');
+            if (!val) return alert('Por favor, responda ou selecione um local.');
+            
             if (missingInfoQueue[0].key.startsWith('transport_fix_')) {
                 var idx = parseInt(missingInfoQueue[0].key.split('_')[2]);
                 tripData.activities[idx].transport = val;
@@ -674,7 +695,6 @@
             renderItinerary();
         }
 
-        // --- RESTAURAÇÃO: Visual de 3 Colunas + Dropdown + Timeline ---
         function renderItinerary() {
             var container = document.getElementById('itinerary-content');
             container.innerHTML = '';
