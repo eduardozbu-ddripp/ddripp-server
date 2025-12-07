@@ -21,7 +21,7 @@
         var distanceMatrixService = null;
         window.onload = function() {
              if (typeof google !== 'undefined' && google.maps) {
-                try { distanceMatrixService = new google.maps.DistanceMatrixService(); }
+                try { distanceMatrixService = new google.maps.DistanceMatrixService(); } 
                 catch(e) { console.warn("Maps Service Error (Distance):", e); }
              }
         }
@@ -33,7 +33,7 @@
         body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; color: #343a40; }
         .card-shadow { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05); }
         
-        /* --- LAYOUT 3 COLUNAS --- */
+        /* GRID DE 3 COLUNAS */
         .itinerary-grid {
             display: grid;
             grid-template-columns: 70px 90px 1fr; 
@@ -44,19 +44,14 @@
         }
         
         @media (max-width: 640px) {
-            .itinerary-grid {
-                grid-template-columns: 50px 70px 1fr; 
-                gap: 0.5rem;
-                padding: 1rem;
-                font-size: 0.9rem;
-            }
+            .itinerary-grid { grid-template-columns: 50px 70px 1fr; gap: 0.5rem; padding: 1rem; font-size: 0.9rem; }
         }
 
         .sticky-header { position: sticky; top: 0; z-index: 10; background-color: #f8f9fa; padding-top: 0.75rem; padding-bottom: 0.75rem; }
         .pac-container { z-index: 1051 !important; }
         @media print { .no-print { display: none !important; } }
         
-        /* Estilos Voo (Timeline Vertical) */
+        /* ESTILOS DE VOO (Timeline) */
         details > summary { list-style: none; cursor: pointer; transition: background 0.2s; }
         details > summary::-webkit-details-marker { display: none; }
         details[open] > summary { background-color: #eff6ff; border-bottom: 1px solid #dbeafe; }
@@ -67,15 +62,15 @@
         .flight-dot { position: absolute; left: -27px; top: 4px; width: 12px; height: 12px; background: white; border: 2px solid #94a3b8; border-radius: 50%; z-index: 10; }
         .flight-dot.active { background: #3b82f6; border-color: #3b82f6; }
         
-        /* Links Mapa */
+        /* LINKS MAPA */
         a.map-link { color: #2563eb; text-decoration: none; }
         a.map-link:hover { text-decoration: underline; }
         
-        /* Voz */
+        /* VOZ */
         .listening-pulse { animation: pulse-red 1.5s infinite; color: #ef4444; }
         @keyframes pulse-red { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.2); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
 
-        /* Estilo para arquivos anexados */
+        /* ARQUIVOS */
         .file-badge { display: inline-flex; align-items: center; background-color: #eff6ff; color: #1e40af; padding: 4px 10px; border-radius: 16px; font-size: 0.8rem; border: 1px solid #dbeafe; margin-right: 5px; margin-bottom: 5px;}
     </style>
 </head>
@@ -94,7 +89,7 @@
         <div id="initial-view" class="flex flex-col items-center justify-center min-h-[60vh]">
              <header class="text-center mb-8">
                 <h1 class="text-6xl font-bold text-gray-800 tracking-tighter">ddripp</h1>
-                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • Fusion V6 (Final)</p>
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V8 (Model Fix)</p>
             </header>
             
             <div class="bg-white p-8 rounded-2xl card-shadow w-full relative max-w-2xl">
@@ -103,7 +98,7 @@
                 <div class="relative">
                     <textarea id="initial-input" rows="6" class="w-full p-4 pr-24 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition resize-none text-lg mt-2" placeholder="Clique no microfone ou anexe arquivos..."></textarea>
                     
-                    <!-- BOTÕES DE CLIP E MICROFONE (RESTAURADOS) -->
+                    <!-- BOTÕES DE INPUT (RESTAURADOS) -->
                     <div class="absolute right-3 bottom-3 flex gap-2">
                         <button onclick="document.getElementById('file-upload').click()" class="p-2 text-gray-400 hover:text-blue-600 transition rounded-full hover:bg-gray-100" title="Anexar Arquivo">
                             <i class="fas fa-paperclip text-xl"></i>
@@ -197,16 +192,17 @@
     
     <script>
         // =================================================================
-        // CONFIGURAÇÃO SEGURA DA CHAVE API (JÁ CONFIGURADA)
-        var KEY_PART_1 = "AIzaSyBg0vmYZeSN32sK"; 
-        var KEY_PART_2 = "0KdXXi57unvZ6gdZIf8"; 
+        // CONFIGURAÇÃO SEGURA DA CHAVE API (Chave trocada para a do ddripp2ok)
+        var KEY_PART_1 = "AIzaSyDpIh6fNWjKRmA0Z"; 
+        var KEY_PART_2 = "Ve9mz_2tfhCXZrZSFQ"; 
         var GEMINI_API_KEY = KEY_PART_1 + KEY_PART_2; 
         
         var SERVER_SHARE_URL = "https://ddripp-server.onrender.com/share"; 
         // =================================================================
 
-        // MODELO ESTÁVEL - Mudamos de "exp" para "flash" para evitar erro 404
-        var MODELS_TO_TRY = ["gemini-1.5-flash"]; 
+        // LISTA DE MODELOS ATUALIZADA (Sua sugestão)
+        // O código vai tentar um por um até conseguir
+        var MODELS_TO_TRY = ["gemini-2.0-flash-exp", "gemini-1.5-flash", "gemini-1.5-flash-latest"]; 
         
         var tripData = { origin: null, destination: null, startDate: null, returnDate: null, activities: [], title: '', tripObjective: '', weatherForecast: '', accommodation: null };
         var missingInfoQueue = [];
@@ -284,7 +280,7 @@
         function showLoader(msg) { document.getElementById('loading-message').textContent = msg; document.getElementById('loading-spinner').classList.remove('hidden'); }
         function hideLoader() { document.getElementById('loading-spinner').classList.add('hidden'); }
 
-        // --- LLM CALL (ATUALIZADO PARA ACEITAR ARQUIVOS) ---
+        // --- LLM CALL (COM RETRY AUTOMÁTICO) ---
         async function callGeminiSmart(promptText, responseSchema) {
             // Cria o payload base
             var payload = { 
@@ -307,15 +303,18 @@
                 var model = MODELS_TO_TRY[i];
                 var url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + GEMINI_API_KEY;
                 try {
+                    console.log("Tentando modelo:", model);
                     var response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                     if (response.ok) {
                         var result = await response.json();
                         var text = result.candidates?.[0]?.content?.parts?.[0]?.text;
                         return responseSchema ? JSON.parse(text) : text;
+                    } else {
+                        console.warn(`Falha no modelo ${model}:`, response.status);
                     }
                 } catch (e) { console.warn(e); }
             }
-            throw new Error("Não foi possível conectar à IA. Verifique sua conexão.");
+            throw new Error("Não foi possível conectar à IA. Verifique sua conexão ou a chave API.");
         }
 
         // --- CÁLCULO DE HORAS ---
