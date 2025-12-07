@@ -16,13 +16,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 
     <!-- Google Maps -->
-    <!-- ⚠️ A CHAVE DO GOOGLE MAPS FICA AQUI (Pode ser pública se restrita por domínio) -->
+    <!-- ⚠️ A CHAVE DO GOOGLE MAPS FICA AQUI -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAEG18G07ql90WhbJ5hkpLoC7NYTTk-ESs&libraries=places&callback=initMap" async defer></script>
 
     <script>
         window.initMap = function() { console.log("Google Maps carregado."); }
         var distanceMatrixService = null;
-        // Garantir que os serviços do Maps iniciem
         window.onload = function() {
              if (typeof google !== 'undefined' && google.maps) {
                 distanceMatrixService = new google.maps.DistanceMatrixService();
@@ -34,18 +33,16 @@
         body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; color: #343a40; }
         .card-shadow { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05); }
         
-        /* --- LAYOUT 3 COLUNAS (GRID) --- */
+        /* --- LAYOUT 3 COLUNAS (O ORIGINAL QUE FUNCIONAVA) --- */
         .itinerary-grid {
             display: grid;
-            /* Coluna 1 (Quando): 70px | Coluna 2 (Quem): 90px | Coluna 3 (O Quê): O resto */
             grid-template-columns: 70px 90px 1fr; 
             gap: 1rem;
             align-items: start;
-            padding: 1.25rem; /* p-5 do tailwind */
+            padding: 1.25rem;
             border-bottom: 1px solid #f3f4f6;
         }
         
-        /* Ajuste para Mobile */
         @media (max-width: 640px) {
             .itinerary-grid {
                 grid-template-columns: 50px 70px 1fr; 
@@ -59,7 +56,7 @@
         .pac-container { z-index: 1051 !important; }
         @media print { .no-print { display: none !important; } }
         
-        /* Estilos Voo (A MÁGICA VISUAL) */
+        /* Estilos Voo (A Linha do Tempo Vertical) */
         details > summary { list-style: none; cursor: pointer; transition: background 0.2s; }
         details > summary::-webkit-details-marker { display: none; }
         details[open] > summary { background-color: #eff6ff; border-bottom: 1px solid #dbeafe; }
@@ -84,7 +81,7 @@
     <!-- Loader -->
     <div id="loading-spinner" class="hidden fixed inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center p-4 z-[100]">
         <div class="spinner rounded-full h-16 w-16 border-4 border-t-4 border-gray-200"></div>
-        <p id="loading-message" class="text-white mt-4 text-lg font-medium animate-pulse">A processar roteiro...</p>
+        <p id="loading-message" class="text-white mt-4 text-lg font-medium animate-pulse">A processar logística...</p>
     </div>
 
     <!-- App Container -->
@@ -94,22 +91,19 @@
         <div id="initial-view" class="flex flex-col items-center justify-center min-h-[60vh]">
              <header class="text-center mb-8">
                 <h1 class="text-6xl font-bold text-gray-800 tracking-tighter">ddripp</h1>
-                <!-- Título Atualizado -->
-                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V 2.0 (Expert)</p>
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • Cadeia Logística Ativa</p>
             </header>
             
             <div class="bg-white p-8 rounded-2xl card-shadow w-full relative max-w-2xl">
-                <!-- Frase de Instrução Atualizada -->
                 <p class="text-gray-400 mb-4 text-base text-center">Fale ou escreva livremente os detalhes do plano de viagem do seu grupo.</p> 
                 
                 <div class="relative">
-                    <textarea id="initial-input" rows="6" class="w-full p-4 pr-12 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition resize-none text-lg mt-2" placeholder="Clique no microfone e comece a falar..."></textarea>
+                    <textarea id="initial-input" rows="6" class="w-full p-4 pr-12 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition resize-none text-lg mt-2" placeholder="Ex: Voo Gol 1234 saindo de GRU dia 15/12 às 14h para Salvador. Ficar no Hotel Fasano..."></textarea>
                     <button onclick="toggleVoice('initial-input', this)" class="absolute right-3 bottom-3 p-2 text-gray-400 hover:text-blue-600 transition rounded-full hover:bg-gray-100" title="Falar">
                         <i class="fas fa-microphone text-xl"></i>
                     </button>
                 </div>
                 
-                <!-- Botão Simplificado -->
                 <button id="btn-gerar" onclick="handleInitialInput()" class="mt-6 w-full bg-blue-600 text-white font-bold py-4 px-6 rounded-xl hover:bg-blue-700 transition-all transform active:scale-95 shadow-lg hover:shadow-xl uppercase tracking-wide">
                     GERAR ROTEIRO
                 </button>
@@ -185,11 +179,6 @@
         </div>
     </div>
     
-    <!-- 2. INCLUINDO O FICHEIRO DE TREINO SEPARADO (VAZIO POR ENQUANTO) -->
-    <script>
-        var MASTER_TRAINING_DATA = ""; 
-    </script>
-    
     <script>
         // =================================================================
         // CONFIGURAÇÃO SEGURA DA CHAVE API (DIVIDIDA)
@@ -209,6 +198,7 @@
         var autocomplete;
         var selectedFlightActivityIndex = -1; 
         var selectedTransportActivityIndex = -1;
+        var MASTER_TRAINING_DATA = ""; 
         
         // --- VOZ ---
         var recognition;
@@ -466,7 +456,9 @@
                     }
                     if(!tripData.activities) tripData.activities = [];
                     
-                    fillGeographicGaps();
+                    // --- AQUI ESTÁ A MÁGICA DA CADEIA LOGÍSTICA ---
+                    fillGeographicGaps(); 
+                    // ----------------------------------------------
 
                     if (checkFlightClarification()) return; 
                     if (checkTransportClarification()) return;
@@ -482,7 +474,7 @@
             }
         }
 
-        // LÓGICA DE MICRO-DESLOCAMENTOS AUTOMÁTICOS
+        // --- CÉREBRO DA CADEIA LOGÍSTICA (A Lógica que você pediu) ---
         function fillGeographicGaps() {
             tripData.activities.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
             var newActivities = [];
@@ -492,16 +484,17 @@
             for (var i = 0; i < tripData.activities.length; i++) {
                 var curr = tripData.activities[i];
                 
-                // --- TRATAMENTO DE VOO E TRANSFER DE CHEGADA ---
+                // 1. CADEIA AÉREA: VOO -> TRANSFER
                 if (curr.type === 'travel' && curr.destinationAirport && curr.flightNumber) {
-                    newActivities.push(curr); // Mantém o voo original
+                    newActivities.push(curr); // Mantém o voo
                     
-                    // 1. Calcular Desembarque e Tempo de Espera (30 min)
+                    // Calcula tempos
                     var arrivalTime = addTime(curr.time, curr.flightDurationMinutes || 120);
-                    var transferStart = addTime(arrivalTime, 30);
+                    var transferStart = addTime(arrivalTime, 30); // 30 min para bagagem
                     
                     var nextLocation = tripData.accommodation || null;
                     
+                    // Descobre para onde vai depois do voo
                     if (i < tripData.activities.length - 1) {
                         var next = tripData.activities[i+1];
                         if(next.location && !next.location.toLowerCase().includes("aeroporto")) {
@@ -511,22 +504,23 @@
                         nextLocation = tripData.destination || null;
                     }
                     
-                    var transferDestinationName = nextLocation || "Acomodação/Ponto de Encontro";
+                    var transferDest = nextLocation || "Acomodação/Ponto de Encontro";
                     if (tripData.returnDate && curr.date === tripData.returnDate && curr.destinationAirport.includes(tripData.origin)) {
-                        transferDestinationName = "Casa / Origem";
+                        transferDest = "Casa / Origem";
                     }
 
+                    // Insere o Transfer Automaticamente
                     if (nextLocation && !nextLocation.includes(curr.destinationAirport)) {
                         newActivities.push({
                             date: curr.date,
                             time: transferStart,
                             person: curr.person,
-                            description: "Transfer Aeroporto (" + curr.destinationAirport + ") -> " + transferDestinationName,
-                            location: curr.destinationAirport + " para " + transferDestinationName,
+                            description: "Transfer Aeroporto -> " + transferDest,
+                            location: curr.destinationAirport + " para " + transferDest,
                             type: "travel",
                             transport: "Transfer/Uber"
                         });
-                        lastKnownLocation = transferDestinationName;
+                        lastKnownLocation = transferDest;
                     } else {
                         lastKnownLocation = curr.destinationAirport;
                     }
@@ -534,18 +528,19 @@
                     continue;
                 }
 
-                // --- TRATAMENTO DE DESLOCAMENTO URBANO ---
+                // 2. CADEIA TERRESTRE: DESLOCAMENTO ENTRE ATIVIDADES
                 if (curr.location) {
-                    var cleanedLastLocation = lastKnownLocation ? lastKnownLocation.split(' para ')[lastKnownLocation.split(' para ').length - 1] : null;
+                    var cleanedLast = lastKnownLocation ? lastKnownLocation.split(' para ')[lastKnownLocation.split(' para ').length - 1] : null;
                     
-                    if (cleanedLastLocation && curr.location !== cleanedLastLocation && !curr.description.includes(cleanedLastLocation)) {
+                    // Se mudou de lugar, insere deslocamento
+                    if (cleanedLast && curr.location !== cleanedLast && !curr.description.includes(cleanedLast)) {
                         var travelTime = subtractTime(curr.time, 45); 
                         newActivities.push({
                             date: curr.date,
                             time: travelTime,
                             person: curr.person,
-                            description: "Deslocamento: " + cleanedLastLocation + " -> " + curr.location,
-                            location: cleanedLastLocation + " para " + curr.location,
+                            description: "Deslocamento: " + cleanedLast + " -> " + curr.location,
+                            location: cleanedLast + " para " + curr.location,
                             type: "travel",
                             transport: "Deslocamento Urbano"
                         });
