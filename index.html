@@ -25,19 +25,22 @@
             }
         }
     </script>
-    <!-- ⚠️ IMPORTANTE: Esta é a chave do MAPS (Frontend). Ela pode ficar pública se você restringir o domínio no console do Google. -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBLF56FKjEiydFp63F9IKm37TsiF3e5Gyk&libraries=places&callback=initMap" async defer></script>
 
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; color: #343a40; }
         .card-shadow { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05); }
-        .itinerary-grid { display: grid; grid-template-columns: 65px 1fr; gap: 1rem; align-items: start; padding: 1.25rem; border-bottom: 1px solid #f3f4f6; transition: background 0.2s; }
-        .itinerary-grid:hover { background-color: #fafafa; }
         
-        .time-col { text-align: right; font-feature-settings: "tnum"; font-variant-numeric: tabular-nums; }
-        .content-col { }
+        /* RESTAURAÇÃO: GRID DE 3 COLUNAS */
+        .itinerary-grid { display: grid; grid-template-columns: 55px 140px 1fr; gap: 0.75rem; align-items: center; padding: 1rem; border-bottom: 1px solid #f3f4f6; }
+        @media (max-width: 640px) { .itinerary-grid { grid-template-columns: 45px 90px 1fr; gap: 0.5rem; padding: 0.75rem; font-size: 0.85rem; } }
 
-        .sticky-header { position: sticky; top: 0; z-index: 10; background-color: #f8f9fa; padding: 1rem; border-bottom: 2px solid #e5e7eb; margin-top: 1rem; }
+        .sticky-header { position: sticky; top: 0; z-index: 10; background-color: #f8f9fa; padding-top: 0.75rem; padding-bottom: 0.75rem; border-bottom: 2px solid #e5e7eb; }
+        
+        /* ESTILOS DE DROPDOWN E DETALHES */
+        details > summary { list-style: none; cursor: pointer; transition: background 0.2s; }
+        details > summary::-webkit-details-marker { display: none; }
+        details[open] > summary { background-color: #eff6ff; border-bottom: 1px solid #dbeafe; }
         
         .flight-card { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-left: 4px solid #3b82f6; padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 
@@ -62,55 +65,23 @@
     </div>
 
     <!-- CONFIGURAÇÃO DO CÉREBRO (TREINAMENTO - ITEM 1.1 DO PLANO) -->
-    <!-- Este é o Prompt ddripp3 consolidado -->
     <script>
         const TURISMOLOGO_PERSONA = `
 # INSTRUÇÃO DO SISTEMA: AGENTE LOGÍSTICO DRIPP (Assistente de Organização de Viagens)
 
 ## I. PAPEL E MISSÃO
+Você é o Agente Logístico DRIPP, um assistente sênior com 20 anos de experiência em produção de logística de viagens.
 
-Você é o Agente Logístico DRIPP, um assistente sênior com 20 anos de experiência em produção de logística de viagens (curtas, longas, solo, grupo, nacionais ou internacionais). Sua missão é auxiliar o organizador de viagens (o usuário) a transformar uma coleção de dados brutos e fragmentados em um plano de viagem completo, impecável, validado e otimizado, que cubra o viajante em tempo integral, da partida ao retorno.
+## II. REGRAS DE PROCESSAMENTO
+1. **Análise de Input:** Filtre Quem, Onde, O quê, Quando e Meio de Transporte.
+2. **Gap-Filling Interativo:** - Se faltar data, pergunte.
+   - Se faltar hospedagem, gere [LEMBRETE - HOSPEDAGEM].
+3. **Processamento de Voos (CRÍTICO):**
+   - Se o usuário pedir para sugerir voos ou der dados incompletos, VOCÊ DEVE GERAR O ARRAY "flightOptions" no JSON com 3 opções reais ou realistas baseadas em rotas comuns.
+   - Não escolha o voo sozinho. Dê as opções para o usuário validar.
 
-## II. REGRAS DE PROCESSAMENTO DE DADOS E LÓGICA (Consolidação e Proatividade)
-
-1.  Análise de Input Bruto: Você deve analisar o input do usuário, independentemente do seu formato. Filtre rigorosamente os elementos cruciais para a logística: Quem, Onde, O quê, Quando e Meio de Transporte (se mencionado).
-2.  Organização e Cronologia: Reestruture todo o material filtrado em uma sequência lógica, cronológica e ininterrupta por dia. O viajante não pode ter "buracos" no roteiro.
-3.  Identificação e Preenchimento de Lacunas (Gap-Filling Interativo):
-
-  - Verificação de Pernoite: Para viagens que exigem pernoite, verifique se há uma hospedagem definida. Se não houver, gere a seguinte instrução formatada para acionar um pop-up de lembrete no aplicativo:
-  - [LEMBRETE - HOSPEDAGEM] Já temos hospedagem definida?
-  - A resposta deve guiar o app para preencher a informação na lacuna ou acionar um botão de sugestões que direcione para uma pesquisa no Google Maps na região.
-
-  - Verificação de Distância e Transporte: Para atividades distantes ou transições logísticas críticas (como aeroporto/hotel), garanta que um meio de transporte adequado esteja definido. Caso contrário, gere a seguinte instrução formatada para acionar um pop-up de lembrete:
-  - [LEMBRETE - TRANSPORTE] Já temos meio de transporte definido para este trajeto?
-
-4.  Criação de Etapas Derivadas (Proatividade Logística): Você deve gerar e inserir novas etapas de "Deslocamento" baseadas em cálculos simulados utilizando Google Maps para garantir fidelidade e proporcionalidade no tempo de deslocamento. Exemplo: Se o input define um "Compromisso às 09:00 no venue" a "Hospedagem" e o “meio de transporte”, verifique o tempo de deslocamento no google maps com estas condições e adicione 10 minutos de embarque e desembarque para calcular e inserir uma atividade anterior como: 08:30 - Saída da Hospedagem para o Venue
-5.  Processamento de Voos (Validação e Detalhamento):
-
-  - Validação de Dados: Se as informações de voo estiverem incompletas (falta data, aeroporto de partida/chegada, Cia, número do voo, horário), o sistema deve solicitar uma busca no Google Flights (simulando a função da API de busca).
-  - Sugestão e Escolha: Apresente 3 opções de voos coerentes com as características informadas (ex: [VOOS ENCONTRADOS] Opção 1, Opção 2, Opção 3). Gere a instrução para o aplicativo acionar um pop-up para o usuário sinalizar o voo correto, que será o dado definitivo para o cronograma.
-  - Detalhamento Logístico: A partir do voo informado e definitivo, crie e insira no cronograma etapas detalhadas no formato de menu dropdown (que será renderizado pelo app) com os seguintes cálculos e títulos:
-  - Chegada no Aeroporto/Bagagens: 2 horas antes da decolagem (voos Nacionais) ou 3 horas antes da decolagem (voos Internacionais).
-  - Embarque: 40 minutos antes da decolagem.
-  - Decolagem (conforme dado do voo).
-  - Desembarque (conforme dado do voo).
-
-6.  Verificação de Coerência: Revise o cronograma completo para garantir que as transições de tempo e local sejam fisicamente e logicamente viáveis.
-
-## III. REGRAS DE CURADORIA (Diferencial de Baixa Emissão de Carbono)
-
-1.  Alimentação Local e Otimizada: Identifique o horário de almoço e/ou jantar no cronograma.
-  - Sugestão Padrão: Crie uma lista de 3-5 sugestões de restaurantes próximos ao destino da atividade atual, priorizando opções que permitam o deslocamento a pé (considerando uma distância razoável e condições climáticas favoráveis).
-
-2.  Atividades de Baixa Emissão: Reconheça o "Tempo Livre" no cronograma.
-  - Sugestão Padrão: Crie uma lista de 3-5 sugestões de atividades no entorno imediato (caminhada, museus locais, turismo comunitário, etc.) que estimulem a baixa emissão de carbono e que se alinhem ao contexto de Logística Responsável (RAG).
-
-## IV. TOM E FORMATO DE COMUNICAÇÃO
-
-1.  Idioma e Estilo: Português do Brasil. Mantenha um tom profissional, consultivo, mas caloroso e acessível.
-2.  Dialeto: Adote o estilo de linguagem do Sudeste brasileiro, como em frases como: "Faz sentido para você?", "Podemos avançar para o próximo dia?" ou "Quer focar agora em refinar essa parte?".
-
-IMPORTANTE: SUA RESPOSTA DEVE SER ESTRITAMENTE UM JSON SEGUINDO O SCHEMA FORNECIDO PELA API.
+## III. ESTRUTURA DE RESPOSTA (JSON)
+Responda APENAS com JSON. Use o schema fornecido, preenchendo "flightOptions" quando houver ambiguidade aérea.
         `;
     </script>
 
@@ -119,16 +90,16 @@ IMPORTANTE: SUA RESPOSTA DEVE SER ESTRITAMENTE UM JSON SEGUINDO O SCHEMA FORNECI
         <div id="initial-view" class="flex flex-col items-center justify-center min-h-[60vh]">
              <header class="text-center mb-8">
                 <h1 class="text-6xl font-bold text-gray-800 tracking-tighter">ddripp<span class="text-blue-500">.</span></h1>
-                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V 1.1 (Core Stable)</p>
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V 1.2 (Fusion)</p>
             </header>
             
             <div class="bg-white p-8 rounded-2xl card-shadow w-full relative max-w-2xl">
                 <p class="text-gray-400 mb-4 text-base text-center">Descreva a viagem ou anexe comprovantes e roteiros antigos.</p> 
                 <div class="relative">
-                    <textarea id="initial-input" rows="4" class="w-full p-4 pr-24 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition resize-none text-lg mt-2" placeholder="Ex: Roteiro de 5 dias em Salvador, foco cultural e luxo..."></textarea>
+                    <textarea id="initial-input" rows="4" class="w-full p-4 pr-24 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition resize-none text-lg mt-2" placeholder="Ex: Roteiro de 5 dias em Salvador..."></textarea>
                     <div class="absolute right-3 bottom-3 flex gap-2">
-                        <button onclick="document.getElementById('file-upload').click()" class="p-2 text-gray-400 hover:text-blue-600 transition rounded-full hover:bg-gray-100" title="Anexar Arquivo"><i class="fas fa-paperclip text-xl"></i></button>
-                        <button onclick="toggleVoice('initial-input', this)" class="p-2 text-gray-400 hover:text-blue-600 transition rounded-full hover:bg-gray-100" title="Falar"><i class="fas fa-microphone text-xl"></i></button>
+                        <button onclick="document.getElementById('file-upload').click()" class="p-2 text-gray-400 hover:text-blue-600 transition rounded-full hover:bg-gray-100"><i class="fas fa-paperclip text-xl"></i></button>
+                        <button onclick="toggleVoice('initial-input', this)" class="p-2 text-gray-400 hover:text-blue-600 transition rounded-full hover:bg-gray-100"><i class="fas fa-microphone text-xl"></i></button>
                     </div>
                 </div>
                 <input type="file" id="file-upload" class="hidden" accept=".pdf,image/*,application/pdf" multiple onchange="handleFileSelect(this)">
@@ -145,6 +116,18 @@ IMPORTANTE: SUA RESPOSTA DEVE SER ESTRITAMENTE UM JSON SEGUINDO O SCHEMA FORNECI
                 <h3 id="gap-question" class="font-bold text-xl mb-6 text-gray-800"></h3>
                 <input type="text" id="gap-input" class="w-full p-4 border border-gray-300 rounded-xl mb-6 text-lg" placeholder="Sua resposta...">
                 <button onclick="handleGapInput()" class="w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-xl hover:bg-blue-700 transition">Confirmar</button>
+            </div>
+        </div>
+
+        <!-- Tela 2.5: Seleção de Voo (RESTAURADO) -->
+        <div id="flight-selection-view" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+            <div class="bg-white p-6 rounded-2xl card-shadow w-full max-w-lg relative max-h-[80vh] flex flex-col">
+                <h3 class="font-bold text-xl mb-2 text-gray-800"><i class="fas fa-plane-up mr-2 text-blue-500"></i>Confirme o Voo</h3>
+                <p class="text-sm text-gray-500 mb-4">A IA encontrou estas opções. Qual delas prefere?</p>
+                <div id="flight-options-list" class="space-y-3 overflow-y-auto flex-grow pr-2"></div>
+                <div class="mt-4 pt-4 border-t border-gray-100">
+                    <button onclick="cancelFlightSelection()" class="w-full text-gray-500 text-sm hover:underline py-2">Nenhum destes (Inserir manualmente)</button>
+                </div>
             </div>
         </div>
 
@@ -166,20 +149,6 @@ IMPORTANTE: SUA RESPOSTA DEVE SER ESTRITAMENTE UM JSON SEGUINDO O SCHEMA FORNECI
                 </div>
             </header>
 
-            <!-- Card de Logística Aérea (NOVO) -->
-            <div id="flight-logic-card" class="flight-card hidden">
-                <div class="flex justify-between items-center flex-wrap gap-4">
-                    <div>
-                        <h3 class="font-bold text-blue-900 text-lg"><i class="fas fa-plane-departure mr-2"></i>Logística Aérea</h3>
-                        <p class="text-sm text-blue-700">Verificar disponibilidade real e conexões.</p>
-                    </div>
-                    <a id="google-flights-btn" href="#" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow transition flex items-center">
-                        Buscar Voos no Google <i class="fas fa-external-link-alt ml-2 text-xs"></i>
-                    </a>
-                </div>
-            </div>
-
-            <!-- Conteúdo do Dia a Dia -->
             <div id="itinerary-content" class="space-y-2"></div>
         </div>
     </div>
@@ -196,14 +165,11 @@ IMPORTANTE: SUA RESPOSTA DEVE SER ESTRITAMENTE UM JSON SEGUINDO O SCHEMA FORNECI
 
     <script>
         // =================================================================
-        // CONFIGURAÇÕES DE SEGURANÇA (GEMINI AI)
-        // O GitHub bloqueia chaves expostas. Para evitar isso, dividimos a chave em duas partes.
-        // Cole a primeira metade em KEY_PART_1 e a segunda em KEY_PART_2.
+        // CONFIGURAÇÕES DE SEGURANÇA (Divida sua chave do GEMINI em duas partes)
+        // ↓↓↓ COLE SUA CHAVE AQUI (DIVIDIDA EM DUAS PARTES) ↓↓↓
+        var KEY_PART_1 = "AIzaSyDpIh6fNWjKRmA0Z"; // Ex: "AIzaSy..." (Cole a primeira metade aqui)
+        var KEY_PART_2 = "Ve9mz_2tfhCXZrZSFQ"; // Ex: "...89zT..." (Cole a segunda metade aqui)
         
-        var KEY_PART_1 = "AIzaSyDpIh6fNWjKRmA0Z"; // Ex: "AIzaSyD8_..."
-        var KEY_PART_2 = "Ve9mz_2tfhCXZrZSFQ"; // Ex: "...K9s8_z2"
-        
-        // O código junta as duas partes automaticamente:
         var GEMINI_API_KEY = KEY_PART_1 + KEY_PART_2; 
         
         var MODELS_TO_TRY = ["gemini-2.0-flash-exp", "gemini-1.5-flash"]; 
@@ -214,13 +180,12 @@ IMPORTANTE: SUA RESPOSTA DEVE SER ESTRITAMENTE UM JSON SEGUINDO O SCHEMA FORNECI
         var missingInfoQueue = [];
         var selectedFiles = [];
         var destinationImageUrl = "";
+        var selectedFlightActivityIndex = -1; // Variável para controlar qual atividade está esperando seleção de voo
 
         // --- INICIALIZAÇÃO ---
         window.onload = function() {
-            // Tenta recuperar chave do ambiente se disponível
             const urlParams = new URLSearchParams(window.location.search);
             const encodedData = urlParams.get('data');
-            
             if (encodedData) {
                 try {
                     var jsonStr = atob(encodedData);
@@ -237,7 +202,7 @@ IMPORTANTE: SUA RESPOSTA DEVE SER ESTRITAMENTE UM JSON SEGUINDO O SCHEMA FORNECI
             renderItineraryContent();
         }
 
-        // --- UPLOAD E VISUALIZAÇÃO DE ARQUIVOS ---
+        // --- UPLOAD ---
         function handleFileSelect(input) {
             var files = Array.from(input.files);
             if (!files.length) return;
@@ -272,7 +237,6 @@ IMPORTANTE: SUA RESPOSTA DEVE SER ESTRITAMENTE UM JSON SEGUINDO O SCHEMA FORNECI
             };
             if (responseSchema) payload.generationConfig.responseSchema = responseSchema;
             
-            // Tenta modelos diferentes em ordem
             for (var i = 0; i < MODELS_TO_TRY.length; i++) {
                 try {
                     var url = `https://generativelanguage.googleapis.com/v1beta/models/${MODELS_TO_TRY[i]}:generateContent?key=${GEMINI_API_KEY}`;
@@ -283,33 +247,60 @@ IMPORTANTE: SUA RESPOSTA DEVE SER ESTRITAMENTE UM JSON SEGUINDO O SCHEMA FORNECI
                     }
                 } catch (e) { console.warn(`Falha no modelo ${MODELS_TO_TRY[i]}`, e); }
             }
-            throw new Error("Não foi possível conectar à IA. Verifique sua chave API ou internet.");
+            throw new Error("Não foi possível conectar à IA. Verifique sua chave API.");
         }
 
-        // --- LÓGICA PRINCIPAL (CÉREBRO) ---
+        // --- LÓGICA PRINCIPAL ---
         window.handleInitialInput = async function() {
             var inputVal = document.getElementById('initial-input').value;
             if (!inputVal && selectedFiles.length === 0) return alert('Por favor, diga algo ou anexe um arquivo.');
             
             document.getElementById('loading-spinner').classList.remove('hidden');
 
-            // SCHEMA RÍGIDO PARA GARANTIR ESTRUTURA
-            var schema = { type: "OBJECT", properties: { 
-                "missingCriticalInfo": { "type": "STRING" }, 
-                "tripObjective": { "type": "STRING" }, 
-                "origin": { "type": "STRING" }, 
-                "destination": { "type": "STRING" }, 
-                "startDate": { "type": "STRING" }, 
-                "returnDate": { "type": "STRING" }, 
-                "activities": { "type": "ARRAY", "items": { "type": "OBJECT", "properties": { 
-                    "date": { "type": "STRING" }, 
-                    "time": { "type": "STRING" }, 
-                    "person": { "type": "STRING" }, 
-                    "description": { "type": "STRING" }, 
-                    "location": { "type": "STRING" }, 
-                    "type": { "type": "STRING", "enum": ["travel", "commitment", "meal", "leisure", "free_time"] }
-                }, "required": ["date", "time", "description", "location"] } } 
-            }, "required": ["activities", "tripObjective"] };
+            // SCHEMA RESTAURADO (COM OPÇÕES DE VOO)
+            // Isso garante que a IA saiba como estruturar as opções de voo para o modal
+            var schema = { 
+                type: "OBJECT", 
+                properties: { 
+                    "missingCriticalInfo": { "type": "STRING" }, 
+                    "tripObjective": { "type": "STRING" }, 
+                    "origin": { "type": "STRING" }, 
+                    "destination": { "type": "STRING" }, 
+                    "startDate": { "type": "STRING" }, 
+                    "returnDate": { "type": "STRING" }, 
+                    "activities": { 
+                        "type": "ARRAY", 
+                        "items": { 
+                            "type": "OBJECT", 
+                            "properties": { 
+                                "date": { "type": "STRING" }, 
+                                "time": { "type": "STRING" }, 
+                                "person": { "type": "STRING" }, 
+                                "description": { "type": "STRING" }, 
+                                "location": { "type": "STRING" }, 
+                                "type": { "type": "STRING", "enum": ["travel", "commitment", "meal", "leisure", "free_time"] },
+                                // RESTAURAÇÃO: ARRAY DE OPÇÕES DE VOO
+                                "flightOptions": { 
+                                    "type": "ARRAY", 
+                                    "items": { 
+                                        "type": "OBJECT", 
+                                        "properties": { 
+                                            "airline": {"type": "STRING"}, 
+                                            "flightNumber": {"type": "STRING"}, 
+                                            "time": {"type": "STRING"}, 
+                                            "origin": {"type": "STRING"}, 
+                                            "destination": {"type": "STRING"}, 
+                                            "durationMinutes": {"type": "INTEGER"} 
+                                        } 
+                                    } 
+                                }
+                            }, 
+                            "required": ["date", "time", "description", "location"] 
+                        } 
+                    } 
+                }, 
+                "required": ["activities", "tripObjective"] 
+            };
             
             var textPrompt = "[DATA HOJE]: " + new Date().toLocaleDateString('pt-BR') + "\n[INPUT USUÁRIO]: " + (inputVal || "Analise os arquivos anexos.");
             
@@ -318,22 +309,23 @@ IMPORTANTE: SUA RESPOSTA DEVE SER ESTRITAMENTE UM JSON SEGUINDO O SCHEMA FORNECI
             parts.push({ text: textPrompt });
 
             try {
-                // Aqui usamos o TURISMOLOGO_PERSONA definido no topo
                 var result = await callGeminiSmart(parts, TURISMOLOGO_PERSONA, schema);
                 
                 tripData = { ...tripData, ...result };
                 if(!tripData.activities) tripData.activities = [];
                 selectedFiles = []; renderFilePreviews();
 
-                // Verifica se faltam dados cruciais (Datas)
                 if (!tripData.startDate) { 
                     missingInfoQueue.push({ key: 'startDate', q: "Para calcular a logística, preciso da data de início (Dia/Mês).", type: 'date' }); 
                     window.askNext(); return; 
                 }
 
+                // RESTAURAÇÃO: VERIFICAÇÃO DE VOO (MODAL)
+                // Se a IA gerou opções de voo, paramos tudo e mostramos o modal
+                if (checkFlightClarification()) return;
+
                 document.getElementById('loading-spinner').classList.add('hidden');
                 
-                // Se a IA detectou que falta o destino
                 if (tripData.missingCriticalInfo && !tripData.destination) {
                     missingInfoQueue.push({ key: 'gap_fill', q: tripData.missingCriticalInfo, type: 'text' }); 
                     window.askNext();
@@ -346,10 +338,75 @@ IMPORTANTE: SUA RESPOSTA DEVE SER ESTRITAMENTE UM JSON SEGUINDO O SCHEMA FORNECI
             }
         }
 
-        // --- HELPERS DE DATA ---
+        // --- RESTAURAÇÃO: LÓGICA DE SELEÇÃO DE VOO ---
+        function checkFlightClarification() {
+            // Procura atividades do tipo 'travel' que tenham flightOptions preenchido
+            var idx = tripData.activities.findIndex(a => a.type === 'travel' && a.flightOptions && a.flightOptions.length > 0);
+            if (idx !== -1) { 
+                selectedFlightActivityIndex = idx; 
+                openFlightModal(tripData.activities[idx].flightOptions); 
+                return true; 
+            }
+            return false;
+        }
+
+        function openFlightModal(opts) {
+             var l = document.getElementById('flight-options-list'); 
+             l.innerHTML = '';
+             opts.forEach((o,i) => {
+                 l.innerHTML += `
+                 <div onclick="selFlight(${i})" class="border p-4 rounded-xl cursor-pointer hover:bg-blue-50 mb-2 transition border-gray-200 hover:border-blue-300">
+                    <div class="flex justify-between items-center">
+                        <span class="font-bold text-blue-900">${o.airline} ${o.flightNumber}</span>
+                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">${o.durationMinutes} min</span>
+                    </div>
+                    <div class="text-sm text-gray-600 mt-1">
+                        ${o.origin} (${o.time}) ➝ ${o.destination}
+                    </div>
+                 </div>`;
+             });
+             document.getElementById('initial-view').classList.add('hidden'); 
+             document.getElementById('flight-selection-view').classList.remove('hidden'); 
+             document.getElementById('loading-spinner').classList.add('hidden');
+        }
+
+        window.selFlight = function(i) {
+             var act = tripData.activities[selectedFlightActivityIndex]; 
+             var o = act.flightOptions[i];
+             // Incorpora o voo escolhido na atividade
+             Object.assign(act, {
+                 description: `Voo ${o.airline} ${o.flightNumber} (${o.origin}-${o.destination})`,
+                 time: o.time, 
+                 location: `Aeroporto de ${o.origin}`,
+                 airline: o.airline, 
+                 flightNumber: o.flightNumber
+             });
+             // Remove as opções para não perguntar de novo
+             delete act.flightOptions; 
+             
+             document.getElementById('flight-selection-view').classList.add('hidden'); 
+             document.getElementById('loading-spinner').classList.remove('hidden');
+             
+             // Verifica se tem mais voos para confirmar, senão prossegue
+             if(!checkFlightClarification()) {
+                 if (tripData.missingCriticalInfo && !tripData.destination) {
+                    missingInfoQueue.push({ key: 'gap_fill', q: tripData.missingCriticalInfo, type: 'text' }); 
+                    window.askNext();
+                } else {
+                    window.generateItinerary();
+                }
+             }
+        }
+        
+        window.cancelFlightSelection = function() {
+            delete tripData.activities[selectedFlightActivityIndex].flightOptions;
+            document.getElementById('flight-selection-view').classList.add('hidden');
+            window.generateItinerary();
+        }
+
+        // --- HELPERS E LACUNAS ---
         function parseDate(d) { if(!d) return new Date(9e15); var p=d.split('/'); return new Date(p[2]||2025, (p[1]||1)-1, p[0]); }
         
-        // --- SISTEMA DE LACUNAS ---
         window.askNext = function() {
             var q = missingInfoQueue[0];
             document.getElementById('gap-question').textContent = q.q;
@@ -366,9 +423,8 @@ IMPORTANTE: SUA RESPOSTA DEVE SER ESTRITAMENTE UM JSON SEGUINDO O SCHEMA FORNECI
             if(missingInfoQueue.length) window.askNext(); else { document.getElementById('gap-filling-view').classList.add('hidden'); handleInitialInput(); }
         }
 
-        // --- GERAÇÃO VISUAL (ONDE A MÁGICA ACONTECE) ---
+        // --- RENDERIZAÇÃO ---
         window.generateItinerary = function() {
-            // Busca imagem de fundo (Unsplash)
             if(tripData.destination) {
                 fetch(`https://source.unsplash.com/1200x600/?${encodeURIComponent(tripData.destination)},travel`).then(r => {
                     if(r.ok) { destinationImageUrl = r.url; document.getElementById('header-bg-image').style.backgroundImage = "url('" + r.url + "')"; }
@@ -379,64 +435,47 @@ IMPORTANTE: SUA RESPOSTA DEVE SER ESTRITAMENTE UM JSON SEGUINDO O SCHEMA FORNECI
             document.getElementById('itinerary-view').classList.remove('hidden');
             document.getElementById('fixed-footer-input').classList.remove('hidden');
             renderItineraryContent();
-
-            // Acorda servidor (Opcional)
-            if (SERVER_SHARE_URL && SERVER_SHARE_URL.includes("http")) {
-                var sDate = tripData.startDate || "";
-                var dest = tripData.destination || "Viagem";
-                var pingUrl = `${SERVER_SHARE_URL}?title=Ping&dest=${encodeURIComponent(dest)}&date=${encodeURIComponent(sDate)}&warmup=true`;
-                fetch(pingUrl, { mode: 'no-cors' }).catch(e => console.log("Servidor acordado!"));
-            }
         }
 
         function renderItineraryContent() {
-             // 1. Preencher Header
              document.getElementById('trip-title').textContent = tripData.tripObjective || "Roteiro Personalizado";
              document.getElementById('trip-destination').textContent = tripData.destination || "Destino a definir";
              document.getElementById('trip-date-range').textContent = (tripData.startDate||"") + (tripData.returnDate ? " até " + tripData.returnDate : "");
              
-             // 2. Card de Voo (Logística Aérea)
-             const flightCard = document.getElementById('flight-logic-card');
-             const flightBtn = document.getElementById('google-flights-btn');
-             if (tripData.destination && tripData.startDate) {
-                 flightCard.classList.remove('hidden');
-                 const origin = tripData.origin || 'Brazil';
-                 // Link direto pro Google Flights
-                 const flightUrl = `https://www.google.com/travel/flights?q=Flights+to+${encodeURIComponent(tripData.destination)}+on+${encodeURIComponent(tripData.startDate)}`;
-                 flightBtn.href = flightUrl;
-             }
-
-             // 3. Renderizar Lista de Atividades
              var container = document.getElementById('itinerary-content'); 
              container.innerHTML = '';
              
-             // Agrupar por dia
              var days = {}; 
              tripData.activities.forEach(a => { if(!days[a.date]) days[a.date]=[]; days[a.date].push(a); });
              
-             // Ordenar dias e renderizar
              Object.keys(days).sort((a,b)=>parseDate(a)-parseDate(b)).forEach(d => {
-                 // Cabeçalho do Dia
                  container.innerHTML += `<div class="sticky-header shadow-sm rounded-lg flex justify-between items-center"><span class="font-bold text-lg text-slate-800"><i class="far fa-calendar mr-2 text-blue-500"></i>${d}</span></div>`;
                  
-                 // Lista de atividades do dia
                  days[d].map(a => {
-                    // Lógica do Link do Mapa
                     let locationHtml = '';
                     if (a.location && a.location.length > 2) {
                         const mapLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.location)}`;
                         locationHtml = `<a href="${mapLink}" target="_blank" class="text-xs text-blue-600 hover:text-blue-800 hover:underline mt-1 block"><i class="fas fa-map-pin mr-1"></i>${a.location}</a>`;
                     }
 
-                    // Ícone por tipo
+                    // Ícones e Cores
                     let icon = 'fa-circle';
-                    if (a.type === 'meal') icon = 'fa-utensils text-orange-400';
-                    else if (a.type === 'travel') icon = 'fa-plane text-blue-500';
-                    else if (a.type === 'leisure') icon = 'fa-camera text-purple-500';
+                    let typeColor = 'bg-gray-100 text-gray-600';
+                    if (a.type === 'meal') { icon = 'fa-utensils'; typeColor = 'bg-orange-100 text-orange-600'; }
+                    else if (a.type === 'travel') { icon = 'fa-plane'; typeColor = 'bg-blue-100 text-blue-600'; }
+                    else if (a.type === 'leisure') { icon = 'fa-camera'; typeColor = 'bg-purple-100 text-purple-600'; }
 
+                    // RESTAURAÇÃO: 3 COLUNAS (Time | Quem/Tag | Conteúdo)
                     container.innerHTML += `
                     <div class="itinerary-grid bg-white">
                         <div class="time-col font-mono text-sm font-bold text-gray-500 pt-1">${a.time}</div>
+                        
+                        <div class="flex flex-col items-center">
+                             <div class="text-xs font-bold px-2 py-1 rounded-full ${typeColor} mb-1 w-full text-center truncate">
+                                ${a.person || (a.type === 'travel' ? 'Logística' : 'Todos')}
+                             </div>
+                        </div>
+
                         <div class="content-col">
                             <div class="font-bold text-gray-800 text-base"><i class="fas ${icon} mr-2 text-sm opacity-75"></i>${a.description}</div>
                             ${locationHtml}
@@ -446,7 +485,6 @@ IMPORTANTE: SUA RESPOSTA DEVE SER ESTRITAMENTE UM JSON SEGUINDO O SCHEMA FORNECI
              });
         }
 
-        // --- COMPARTILHAMENTO ---
         window.shareTrip = function() { 
             var jsonStr = encodeURIComponent(JSON.stringify(tripData));
             var base64Data = btoa(jsonStr);
@@ -458,7 +496,6 @@ IMPORTANTE: SUA RESPOSTA DEVE SER ESTRITAMENTE UM JSON SEGUINDO O SCHEMA FORNECI
             window.open("https://api.whatsapp.com/send?text=" + encodeURIComponent(text)); 
         }
 
-        // --- VOZ ---
         window.toggleVoice = function(id) { 
              if (!('webkitSpeechRecognition' in window)) return alert("Funcionalidade disponível apenas no Google Chrome.");
              var r = new webkitSpeechRecognition(); r.lang = "pt-BR";
