@@ -15,10 +15,30 @@
     <!-- Fontes -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 
-    <!-- Google Maps - Carregamento Assíncrono com Bibliotecas (Nova Versão) -->
+    <!-- FIREBASE SECURITY & ANALYTICS (Novo Bloco) -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+      import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-analytics.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyCVipGZZc7Pd2d2cjg_90RKXfzPC2vS4jk", // Nova Chave do Firebase
+        authDomain: "ddripp2.firebaseapp.com",
+        projectId: "ddripp2",
+        storageBucket: "ddripp2.firebasestorage.app",
+        messagingSenderId: "246188888920",
+        appId: "1:246188888920:web:b13c5f7c3af68b37aa8b2d",
+        measurementId: "G-ENQ9Y0EKCB"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const analytics = getAnalytics(app);
+      console.log("Firebase conectado com sucesso.");
+    </script>
+
+    <!-- Google Maps Loader (Usando a NOVA chave do Firebase) -->
     <script>
         (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
-            key: "AIzaSyAEG18G07ql90WhbJ5hkpLoC7NYTTk-ESs", // Sua chave do Maps (Frontend)
+            key: "AIzaSyCVipGZZc7Pd2d2cjg_90RKXfzPC2vS4jk", // <--- Chave atualizada do seu arquivo Firebase
             v: "weekly",
         });
     </script>
@@ -92,7 +112,7 @@
         <div id="initial-view" class="flex flex-col items-center justify-center min-h-[60vh]">
              <header class="text-center mb-8">
                 <h1 class="text-6xl font-bold text-gray-800 tracking-tighter">ddripp</h1>
-                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • Fusion V11 (Maps Fix)</p>
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V12 (Firebase Secure)</p>
             </header>
             
             <div class="bg-white p-8 rounded-2xl card-shadow w-full relative max-w-2xl">
@@ -101,7 +121,7 @@
                 <div class="relative">
                     <textarea id="initial-input" rows="6" class="w-full p-4 pr-24 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition resize-none text-lg mt-2" placeholder="Clique no microfone ou anexe arquivos..."></textarea>
                     
-                    <!-- BOTÕES DE INPUT (RESTAURADOS) -->
+                    <!-- BOTÕES DE INPUT -->
                     <div class="absolute right-3 bottom-3 flex gap-2">
                         <button onclick="document.getElementById('file-upload').click()" class="p-2 text-gray-400 hover:text-blue-600 transition rounded-full hover:bg-gray-100" title="Anexar Arquivo">
                             <i class="fas fa-paperclip text-xl"></i>
@@ -201,8 +221,9 @@
     
     <script>
         // =================================================================
-        // CONFIGURAÇÃO SEGURA DA CHAVE API (DIVIDIDA)
-        // ↓↓↓ COLE SUA CHAVE AQUI (DIVIDIDA EM DUAS PARTES) ↓↓↓
+        // ATENÇÃO: PREENCHA SUA CHAVE DE INTELIGÊNCIA ARTIFICIAL (GEMINI) AQUI
+        // Você pediu para manter esta lógica separada para você preencher
+        // =================================================================
         var KEY_PART_1 = "AIzaSyDpIh6fNWjKRmA0Z"; // Ex: "AIzaSy..."
         var KEY_PART_2 = "Ve9mz_2tfhCXZrZSFQ"; // Ex: "...89zT..."
         var GEMINI_API_KEY = KEY_PART_1 + KEY_PART_2; 
@@ -210,10 +231,9 @@
         var SERVER_SHARE_URL = "https://ddripp-server.onrender.com/share"; 
         // =================================================================
 
-        var MODELS_TO_TRY = ["gemini-2.0-flash"]; 
+        var MODELS_TO_TRY = ["gemini-1.5-flash", "gemini-1.5-flash-latest"]; 
         var tripData = { origin: null, destination: null, startDate: null, returnDate: null, activities: [], title: '', tripObjective: '', weatherForecast: '', accommodation: null };
         var missingInfoQueue = [];
-        // var autocomplete; // REMOVIDO: Usaremos o novo elemento
         var selectedFlightActivityIndex = -1; 
         var selectedTransportActivityIndex = -1;
         var selectedFiles = []; 
@@ -521,7 +541,7 @@
             }
         }
 
-        // --- CÉREBRO DA CADEIA LOGÍSTICA (RESTAURADO) ---
+        // --- CÉREBRO DA CADEIA LOGÍSTICA ---
         function fillGeographicGaps() {
             tripData.activities.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
             var newActivities = [];
