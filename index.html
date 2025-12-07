@@ -425,6 +425,9 @@ Responda APENAS com JSON. Use o schema fornecido, preenchendo "flightOptions" qu
 
         // --- RENDERIZAÇÃO ---
         window.generateItinerary = function() {
+            // Esconde explicitamente o loading-spinner ao entrar na fase de renderização
+            document.getElementById('loading-spinner').classList.add('hidden');
+
             if(tripData.destination) {
                 fetch(`https://source.unsplash.com/1200x600/?${encodeURIComponent(tripData.destination)},travel`).then(r => {
                     if(r.ok) { destinationImageUrl = r.url; document.getElementById('header-bg-image').style.backgroundImage = "url('" + r.url + "')"; }
