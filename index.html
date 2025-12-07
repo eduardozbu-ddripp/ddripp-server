@@ -15,14 +15,13 @@
     <!-- Fontes -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 
-    <!-- FIREBASE INIT (Baseado no seu arquivo 'cdn firebase.txt') -->
+    <!-- FIREBASE INIT (Segurança) -->
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
       import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-analytics.js";
 
-      // Configuração extraída do seu arquivo anexo
       const firebaseConfig = {
-        apiKey: "AIzaSyCVipGZZc7Pd2d2cjg_90RKXfzPC2vS4jk",
+        apiKey: "AIzaSyCVipGZZc7Pd2d2cjg_90RKXfzPC2vS4jk", // Chave Pública do Firebase (OK para Maps)
         authDomain: "ddripp2.firebaseapp.com",
         projectId: "ddripp2",
         storageBucket: "ddripp2.firebasestorage.app",
@@ -34,22 +33,22 @@
       try {
           const app = initializeApp(firebaseConfig);
           const analytics = getAnalytics(app);
-          console.log("Firebase Security: Ativado");
+          console.log("Firebase Security: Ativado (V14)");
       } catch (e) {
           console.warn("Erro ao iniciar Firebase:", e);
       }
     </script>
 
-    <!-- Google Maps Loader (Usando a chave nova do Firebase) -->
+    <!-- Google Maps Loader (Usando Chave do Firebase) -->
     <script>
         (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
-            key: "AIzaSyCVipGZZc7Pd2d2cjg_90RKXfzPC2vS4jk", // <--- Chave do Firebase (Mapa Seguro)
+            key: "AIzaSyCVipGZZc7Pd2d2cjg_90RKXfzPC2vS4jk", // Chave do Firebase
             v: "weekly",
         });
     </script>
 
     <script>
-        window.initMap = function() { console.log("Google Maps API loaded."); }
+        window.initMap = function() { console.log("Google Maps API loaded (V14)."); }
     </script>
 
     <style>
@@ -121,7 +120,7 @@
         <div id="initial-view" class="flex flex-col items-center justify-center min-h-[60vh]">
              <header class="text-center mb-8">
                 <h1 class="text-6xl font-bold text-gray-800 tracking-tighter">ddripp</h1>
-                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V13 (Firebase Secured)</p>
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V14 (Final Fix)</p>
             </header>
             
             <div class="bg-white p-8 rounded-2xl card-shadow w-full relative max-w-2xl">
@@ -230,16 +229,17 @@
     
     <script>
         // =================================================================
-        // ATENÇÃO: PREENCHA SUA CHAVE GEMINI (INTELIGÊNCIA) AQUI
+        // CONFIGURAÇÃO - PREENCHA COM SUA CHAVE GEMINI NOVA
+        // Chave do AI Studio: https://aistudio.google.com/app/apikey
         // =================================================================
-        var KEY_PART_1 = "AIzaSyDpIh6fNWjKRmA0Z"; // Ex: "AIzaSy..."
-        var KEY_PART_2 = "Ve9mz_2tfhCXZrZSFQ"; // Ex: "...89zT..."
+        var KEY_PART_1 = "AIzaSyD1fc4mUuaO841"; // Ex: "AIzaSy..."
+        var KEY_PART_2 = "iQcAAA2-Y2mGb-TDoKnc"; // Ex: "...89zT..."
         var GEMINI_API_KEY = KEY_PART_1 + KEY_PART_2; 
         
         var SERVER_SHARE_URL = "https://ddripp-server.onrender.com/share"; 
         // =================================================================
 
-        var MODELS_TO_TRY = ["gemini-1.5-flash", "gemini-1.5-flash-latest"]; 
+        var MODELS_TO_TRY = ["gemini-2.0-flash", "gemini-1.5-flash"]; 
         var tripData = { origin: null, destination: null, startDate: null, returnDate: null, activities: [], title: '', tripObjective: '', weatherForecast: '', accommodation: null };
         var missingInfoQueue = [];
         var selectedFlightActivityIndex = -1; 
@@ -335,15 +335,18 @@
                 var model = MODELS_TO_TRY[i];
                 var url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + GEMINI_API_KEY;
                 try {
+                    console.log("Tentando modelo:", model);
                     var response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                     if (response.ok) {
                         var result = await response.json();
                         var text = result.candidates?.[0]?.content?.parts?.[0]?.text;
                         return responseSchema ? JSON.parse(text) : text;
+                    } else {
+                        console.warn(`Falha no modelo ${model}:`, response.status);
                     }
                 } catch (e) { console.warn(e); }
             }
-            throw new Error("Não foi possível conectar à IA. Verifique sua conexão ou a chave API.");
+            throw new Error("Não foi possível conectar à IA. Verifique sua chave API do Google AI Studio.");
         }
 
         // --- CÁLCULO DE HORAS ---
