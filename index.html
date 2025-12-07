@@ -15,117 +15,101 @@
     <!-- Fontes -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 
-    <!-- Google Maps Config -->
+    <!-- Google Maps -->
+    <!-- ⚠️ A CHAVE DO GOOGLE MAPS FICA AQUI (Pode ser pública se restrita por domínio) -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAEG18G07ql90WhbJ5hkpLoC7NYTTk-ESs&libraries=places&callback=initMap" async defer></script>
+
     <script>
+        window.initMap = function() { console.log("Google Maps carregado."); }
         var distanceMatrixService = null;
-        var directionsService = null;
-        
-        function initMap() {
-            console.log("Google Maps carregado.");
-            if (typeof google !== 'undefined') {
-                try {
-                    distanceMatrixService = new google.maps.DistanceMatrixService();
-                    directionsService = new google.maps.DirectionsService();
-                } catch(e) { console.warn("Erro ao iniciar serviços Maps", e); }
-            }
+        // Garantir que os serviços do Maps iniciem
+        window.onload = function() {
+             if (typeof google !== 'undefined' && google.maps) {
+                distanceMatrixService = new google.maps.DistanceMatrixService();
+             }
         }
     </script>
-    
-    <!-- ================================================================= -->
-    <!-- ⚠️ CHAVE DO GOOGLE MAPS (FRONTEND) -->
-    <!-- ================================================================= -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBLF56FKjEiydFp63F9IKm37TsiF3e5Gyk&libraries=places&callback=initMap" async defer></script>
 
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; color: #343a40; }
         .card-shadow { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05); }
         
-        /* GRID DE 3 COLUNAS (RESTAURADO DO SEU ARQUIVO ORIGINAL) */
+        /* --- LAYOUT 3 COLUNAS (GRID) --- */
         .itinerary-grid {
             display: grid;
-            grid-template-columns: 55px 140px 1fr; 
-            gap: 0.75rem;
-            align-items: center; 
-            padding: 1rem;
+            /* Coluna 1 (Quando): 70px | Coluna 2 (Quem): 90px | Coluna 3 (O Quê): O resto */
+            grid-template-columns: 70px 90px 1fr; 
+            gap: 1rem;
+            align-items: start;
+            padding: 1.25rem; /* p-5 do tailwind */
             border-bottom: 1px solid #f3f4f6;
         }
         
+        /* Ajuste para Mobile */
         @media (max-width: 640px) {
-            .itinerary-grid { 
-                grid-template-columns: 45px 90px 1fr; 
-                gap: 0.5rem; 
-                padding: 0.75rem; 
-                font-size: 0.85rem; 
+            .itinerary-grid {
+                grid-template-columns: 50px 70px 1fr; 
+                gap: 0.5rem;
+                padding: 1rem;
+                font-size: 0.9rem;
             }
         }
 
         .sticky-header { position: sticky; top: 0; z-index: 10; background-color: #f8f9fa; padding-top: 0.75rem; padding-bottom: 0.75rem; }
+        .pac-container { z-index: 1051 !important; }
+        @media print { .no-print { display: none !important; } }
         
+        /* Estilos Voo (A MÁGICA VISUAL) */
         details > summary { list-style: none; cursor: pointer; transition: background 0.2s; }
         details > summary::-webkit-details-marker { display: none; }
         details[open] > summary { background-color: #eff6ff; border-bottom: 1px solid #dbeafe; }
         
-        /* LINHA DO TEMPO DO VOO (RESTAURADO) */
-        .timeline-container { position: relative; padding-left: 20px; border-left: 2px solid #e2e8f0; margin-left: 10px; margin-top: 10px; margin-bottom: 10px;}
-        .flight-event { position: relative; padding-bottom: 24px; padding-left: 16px; font-size: 0.85rem; }
+        .timeline-container { position: relative; padding-left: 20px; border-left: 2px solid #e2e8f0; margin-left: 10px; }
+        .flight-event { position: relative; padding-bottom: 24px; padding-left: 16px; }
         .flight-event:last-child { padding-bottom: 0; }
-        .flight-event strong { display: block; color: #1e40af; }
+        .flight-dot { position: absolute; left: -27px; top: 4px; width: 12px; height: 12px; background: white; border: 2px solid #94a3b8; border-radius: 50%; z-index: 10; }
+        .flight-dot.active { background: #3b82f6; border-color: #3b82f6; }
         
-        a.map-link-text { color: #4b5563; text-decoration: none; border-bottom: 1px dotted #9ca3af; transition: all 0.2s; }
-        a.map-link-text:hover { color: #2563eb; border-bottom: 1px solid #2563eb; }
+        /* Links Mapa */
+        a.map-link { color: #2563eb; text-decoration: none; }
+        a.map-link:hover { text-decoration: underline; }
         
-        .loading-dots::after { content: ' .'; animation: dots 1.5s steps(5, end) infinite; }
-        @keyframes dots { 0%, 20% { content: ' .'; } 40% { content: ' ..'; } 60% { content: ' ...'; } 80%, 100% { content: ''; } }
+        /* Voz */
+        .listening-pulse { animation: pulse-red 1.5s infinite; color: #ef4444; }
+        @keyframes pulse-red { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.2); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
 
+    <!-- Loader -->
     <div id="loading-spinner" class="hidden fixed inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center p-4 z-[100]">
-        <div class="spinner rounded-full h-16 w-16 border-4 border-t-4 border-blue-500 border-opacity-50"></div>
-        <p id="loading-message" class="text-white mt-4 text-2xl font-bold tracking-widest lowercase">
-            ddripping<span class="loading-dots"></span>
-        </p>
+        <div class="spinner rounded-full h-16 w-16 border-4 border-t-4 border-gray-200"></div>
+        <p id="loading-message" class="text-white mt-4 text-lg font-medium animate-pulse">A processar roteiro...</p>
     </div>
 
-    <!-- PERSONA REFINADA (DO SEU ARQUIVO DD RIPP 2 OK) -->
-    <div id="system-instruction" style="display:none;">
-INSTRUÇÃO DO SISTEMA: AGENTE LOGÍSTICO DRIPP
-I. REGRA DE OURO (DATAS)
-- SE o input não tiver uma data explícita (ex: "dia 29", "próxima sexta"), retorne "startDate": null.
-- NÃO ASSUMA A DATA DE HOJE. É proibido inventar datas.
-II. LÓGICA DE LOCALIZAÇÃO
-- Foque em extrair "Hospedagem" e "Atividades".
-- Para "Almoço" ou "Tempo Livre", NÃO tente inventar restaurantes específicos a menos que o usuário peça. Apenas crie o bloco "Almoço" no horário correto. O código cuidará da busca geográfica.
-III. VOOS
-- Se dados incompletos, crie array "flightOptions".
-IV. JSON OBRIGATÓRIO.
-    </div>
-
+    <!-- App Container -->
     <div id="app-container" class="container mx-auto max-w-4xl p-4 pb-32 flex-grow">
+
         <!-- Tela 1: Input -->
         <div id="initial-view" class="flex flex-col items-center justify-center min-h-[60vh]">
              <header class="text-center mb-8">
                 <h1 class="text-6xl font-bold text-gray-800 tracking-tighter">ddripp</h1>
-                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook Interactive Page</p>
+                <!-- Título Atualizado -->
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V 2.0 (Expert)</p>
             </header>
             
             <div class="bg-white p-8 rounded-2xl card-shadow w-full relative max-w-2xl">
+                <!-- Frase de Instrução Atualizada -->
                 <p class="text-gray-400 mb-4 text-base text-center">Fale ou escreva livremente os detalhes do plano de viagem do seu grupo.</p> 
+                
                 <div class="relative">
                     <textarea id="initial-input" rows="6" class="w-full p-4 pr-12 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition resize-none text-lg mt-2" placeholder="Clique no microfone e comece a falar..."></textarea>
                     <button onclick="toggleVoice('initial-input', this)" class="absolute right-3 bottom-3 p-2 text-gray-400 hover:text-blue-600 transition rounded-full hover:bg-gray-100" title="Falar">
                         <i class="fas fa-microphone text-xl"></i>
                     </button>
                 </div>
-                <input type="file" id="file-upload" class="hidden" accept=".pdf,image/*,application/pdf" multiple onchange="handleFileSelect(this)">
                 
-                <div class="mt-4 flex justify-center">
-                    <button onclick="document.getElementById('file-upload').click()" class="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-2">
-                        <i class="fas fa-paperclip"></i> Anexar PDFs ou Imagens
-                    </button>
-                </div>
-                <div id="file-preview-container" class="hidden flex flex-wrap gap-2 mt-4 justify-center"></div>
-
+                <!-- Botão Simplificado -->
                 <button id="btn-gerar" onclick="handleInitialInput()" class="mt-6 w-full bg-blue-600 text-white font-bold py-4 px-6 rounded-xl hover:bg-blue-700 transition-all transform active:scale-95 shadow-lg hover:shadow-xl uppercase tracking-wide">
                     GERAR ROTEIRO
                 </button>
@@ -145,10 +129,10 @@ IV. JSON OBRIGATÓRIO.
         <div id="flight-selection-view" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
             <div class="bg-white p-6 rounded-2xl card-shadow w-full max-w-lg relative max-h-[80vh] flex flex-col">
                 <h3 class="font-bold text-xl mb-2 text-gray-800">Confirmação de Voo</h3>
-                <p class="text-sm text-gray-500 mb-4">Encontrei opções. Selecione o voo correto:</p>
+                <p class="text-sm text-gray-500 mb-4">Selecione o voo mais adequado:</p>
                 <div id="flight-options-list" class="space-y-3 overflow-y-auto flex-grow pr-2"></div>
                 <div class="mt-4 pt-4 border-t border-gray-100">
-                    <button onclick="cancelFlightSelection()" class="w-full text-gray-500 text-sm hover:underline py-2">Nenhum destes (Inserir Manualmente)</button>
+                    <button onclick="confirmFlightSelection()" class="w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-xl hover:bg-blue-700 transition">Confirmar Seleção</button>
                 </div>
             </div>
         </div>
@@ -157,6 +141,7 @@ IV. JSON OBRIGATÓRIO.
         <div id="itinerary-view" class="hidden bg-white p-4 rounded-2xl">
             <header id="trip-header" class="mb-8 bg-gray-50 p-6 rounded-2xl card-shadow border-l-4 border-blue-500">
                 <h2 id="trip-title" class="text-3xl font-bold text-gray-800 mb-2"></h2>
+                
                 <div class="flex flex-wrap items-center gap-3 text-gray-600 mb-3">
                     <a id="trip-destination-link" href="#" target="_blank" class="flex items-center bg-white px-3 py-1 rounded-full text-sm shadow-sm hover:text-blue-600 transition group cursor-pointer border border-gray-200">
                         <i class="fas fa-map-marker-alt mr-2 text-red-500"></i>
@@ -165,11 +150,21 @@ IV. JSON OBRIGATÓRIO.
                     </a>
                     <div class="flex items-center bg-white px-3 py-1 rounded-full text-sm shadow-sm border border-gray-200">
                         <i class="fas fa-calendar-alt mr-2 text-blue-500"></i>
-                        <span id="trip-date-range"></span>
+                        <span id="trip-date"></span>
+                    </div>
+                </div>
+
+                <div id="weather-box" class="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-100 flex items-start hidden">
+                    <i class="fas fa-cloud-sun mr-2 mt-1 text-blue-500 text-lg"></i>
+                    <div>
+                        <span class="font-semibold block text-blue-700 mb-1">Previsão Média Histórica:</span>
+                        <span id="trip-weather"></span>
                     </div>
                 </div>
             </header>
+
             <div id="itinerary-content" class="space-y-8"></div>
+            
             <div id="trip-footer" class="mt-12 flex justify-center space-x-4 pb-8 no-print">
                 <button onclick="shareTrip()" class="flex items-center bg-green-500 text-white font-bold py-3 px-6 rounded-full hover:bg-green-600 transition shadow-md hover:shadow-lg transform hover:-translate-y-1"><i class="fab fa-whatsapp mr-2 text-xl"></i> Partilhar</button>
                 <button onclick="downloadPDF()" class="flex items-center bg-red-500 text-white font-bold py-3 px-6 rounded-full hover:bg-red-600 transition shadow-md hover:shadow-lg transform hover:-translate-y-1"><i class="fas fa-file-pdf mr-2 text-xl"></i> Baixar PDF</button>
@@ -177,17 +172,24 @@ IV. JSON OBRIGATÓRIO.
         </div>
     </div>
 
-    <!-- Rodapé Fixo (Ajustes) -->
+    <!-- Rodapé -->
     <div id="fixed-footer-input" class="hidden fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-md p-4 border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-40 no-print">
         <div class="container mx-auto max-w-2xl flex items-center gap-3">
             <div class="relative flex-grow">
                 <input type="text" id="adjustment-input" placeholder="Fale ou digite um ajuste..." class="w-full p-4 pr-12 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm outline-none transition">
-                <button onclick="toggleVoice('adjustment-input', this)" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-600 transition p-2 rounded-full hover:bg-gray-100"><i class="fas fa-microphone"></i></button>
+                <button onclick="toggleVoice('adjustment-input', this)" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-600 transition p-2 rounded-full hover:bg-gray-100">
+                    <i class="fas fa-microphone"></i>
+                </button>
             </div>
             <button onclick="handleAdjustmentInput()" class="bg-blue-600 text-white w-14 h-14 rounded-full flex items-center justify-center hover:bg-blue-700 transition-transform transform active:scale-90 shadow-lg"><i class="fas fa-paper-plane text-lg"></i></button>
         </div>
     </div>
-
+    
+    <!-- 2. INCLUINDO O FICHEIRO DE TREINO SEPARADO (VAZIO POR ENQUANTO) -->
+    <script>
+        var MASTER_TRAINING_DATA = ""; 
+    </script>
+    
     <script>
         // =================================================================
         // CONFIGURAÇÃO SEGURA DA CHAVE API (DIVIDIDA)
@@ -201,142 +203,203 @@ IV. JSON OBRIGATÓRIO.
         var SERVER_SHARE_URL = "https://ddripp-server.onrender.com/share"; 
         // =================================================================
 
-        var MODELS_TO_TRY = ["gemini-2.0-flash-exp", "gemini-1.5-flash", "gemini-1.5-pro"]; 
-        
+        var MODELS_TO_TRY = ["gemini-1.5-flash", "gemini-2.0-flash-exp"]; 
         var tripData = { origin: null, destination: null, startDate: null, returnDate: null, activities: [], title: '', tripObjective: '', weatherForecast: '', accommodation: null };
         var missingInfoQueue = [];
+        var autocomplete;
         var selectedFlightActivityIndex = -1; 
-        var selectedFiles = [];
-
-        // --- UTILS ---
-        function showLoader() { document.getElementById('loading-spinner').classList.remove('hidden'); }
-        function hideLoader() { document.getElementById('loading-spinner').classList.add('hidden'); }
+        var selectedTransportActivityIndex = -1;
         
-        // Upload de Arquivos
-        function handleFileSelect(input) {
-            var files = Array.from(input.files);
-            if (!files.length) return;
-            var readPromises = files.map(file => new Promise((resolve, reject) => {
-                var reader = new FileReader();
-                reader.onload = e => resolve({ name: file.name, mimeType: file.type, data: e.target.result.split(',')[1] });
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            }));
-            Promise.all(readPromises).then(results => {
-                selectedFiles = selectedFiles.concat(results);
-                var container = document.getElementById('file-preview-container');
-                container.innerHTML = '';
-                if (selectedFiles.length > 0) container.classList.remove('hidden');
-                selectedFiles.forEach((file, index) => {
-                    container.innerHTML += `<div class="file-badge bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm border border-blue-200"><i class="fas fa-file-alt mr-2"></i>${file.name}</div>`;
-                });
-                input.value = ""; 
-            });
+        // --- VOZ ---
+        var recognition;
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'pt-BR'; 
+            recognition.continuous = false; 
+            recognition.interimResults = false;
         }
 
+        function toggleVoice(inputId, btnElement) {
+            if (!recognition) return alert("Navegador sem suporte a voz.");
+            var icon = btnElement.querySelector('i');
+            if (btnElement.classList.contains('listening')) {
+                recognition.stop();
+                btnElement.classList.remove('listening');
+                icon.classList.remove('listening-pulse');
+                return;
+            }
+            try {
+                recognition.start();
+                btnElement.classList.add('listening');
+                icon.classList.add('listening-pulse');
+                recognition.onresult = function(event) {
+                    var transcript = event.results[0][0].transcript;
+                    var inputEl = document.getElementById(inputId);
+                    if(inputEl.value && !inputEl.value.endsWith(' ')) inputEl.value += ' ';
+                    inputEl.value += transcript;
+                    btnElement.classList.remove('listening');
+                    icon.classList.remove('listening-pulse');
+                };
+                recognition.onend = function() { btnElement.classList.remove('listening'); icon.classList.remove('listening-pulse'); };
+            } catch (e) { console.error(e); }
+        }
+
+        function showLoader(msg) { document.getElementById('loading-message').textContent = msg; document.getElementById('loading-spinner').classList.remove('hidden'); }
+        function hideLoader() { document.getElementById('loading-spinner').classList.add('hidden'); }
+
+        async function callGeminiSmart(promptText, responseSchema) {
+            var payload = { 
+                contents: [{ parts: [{ text: promptText }] }],
+                generationConfig: { responseMimeType: "application/json" } 
+            };
+            if (responseSchema) payload.generationConfig.responseSchema = responseSchema;
+
+            for (var i = 0; i < MODELS_TO_TRY.length; i++) {
+                var model = MODELS_TO_TRY[i];
+                var url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + GEMINI_API_KEY;
+                try {
+                    var response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    if (response.ok) {
+                        var result = await response.json();
+                        var text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                        return responseSchema ? JSON.parse(text) : text;
+                    }
+                } catch (e) { console.warn(e); }
+            }
+            throw new Error("Falha em todos os modelos de IA.");
+        }
+
+        // --- CÁLCULO DE HORAS ---
         function subtractTime(timeStr, minutesToSubtract) {
             if(!timeStr) return "";
             var parts = timeStr.split(':');
             var d = new Date();
             d.setHours(parseInt(parts[0]), parseInt(parts[1]), 0);
             d.setMinutes(d.getMinutes() - minutesToSubtract);
-            return d.getHours().toString().padStart(2, '0') + ":" + d.getMinutes().toString().padStart(2, '0');
+            var h = d.getHours().toString().padStart(2, '0');
+            var m = d.getMinutes().toString().padStart(2, '0');
+            return h + ":" + m;
         }
+        
         function addTime(timeStr, minutesToAdd) {
             if(!timeStr) return "";
             var parts = timeStr.split(':');
             var d = new Date();
             d.setHours(parseInt(parts[0]), parseInt(parts[1]), 0);
             d.setMinutes(d.getMinutes() + minutesToAdd);
-            return d.getHours().toString().padStart(2, '0') + ":" + d.getMinutes().toString().padStart(2, '0');
-        }
-        
-        function parseDate(dateStr) {
-            if (!dateStr) return new Date(8640000000000000);
-            var parts = dateStr.split('/');
-            if (parts.length === 3) {
-                var year = parseInt(parts[2]);
-                if (year < 100) year += 2000;
-                return new Date(year, parts[1] - 1, parts[0]);
-            }
-            return new Date();
+            var h = d.getHours().toString().padStart(2, '0');
+            var m = d.getMinutes().toString().padStart(2, '0');
+            return h + ":" + m;
         }
 
-        function getTravelTimeMinutes(origin, destination) {
-            return new Promise((resolve) => {
-                if (!distanceMatrixService || !origin || !destination) return resolve(45);
-                distanceMatrixService.getDistanceMatrix({
-                    origins: [origin],
-                    destinations: [destination],
-                    travelMode: 'DRIVING',
-                    unitSystem: google.maps.UnitSystem.METRIC,
-                }, (response, status) => {
-                    if (status === 'OK' && response.rows[0].elements[0].status === 'OK') {
-                        resolve(Math.ceil(response.rows[0].elements[0].duration.value / 60 * 1.15)); 
-                    } else { resolve(45); }
-                });
+        // --- POPUPS DE VOO ---
+        function checkFlightClarification() {
+            var flightIndex = tripData.activities.findIndex(function(a) {
+                var isVague = a.type === 'travel' && (!a.flightNumber || !a.airline) && a.description.toLowerCase().includes("voo");
+                var hasOptions = a.flightOptions && a.flightOptions.length > 0;
+                return isVague || hasOptions;
             });
-        }
-        
-        function generateDirectionsLink(origin, destination) {
-            if (!origin || !destination) return '#';
-            return "https://www.google.com/maps/dir/?api=1&origin=" + encodeURIComponent(origin) + "&destination=" + encodeURIComponent(destination) + "&travelmode=driving";
-        }
-        
-        function generateContextualSearchLink(query, userLastLocation) {
-            if (userLastLocation) {
-                return "https://www.google.com/maps/search/" + encodeURIComponent(query + " perto de " + userLastLocation);
+
+            if (flightIndex !== -1) {
+                selectedFlightActivityIndex = flightIndex;
+                var activity = tripData.activities[flightIndex];
+                var options = activity.flightOptions || [
+                    { airline: "Gol", flightNumber: "G3-1000", time: activity.time, origin: activity.originAirport || "GRU", destination: activity.destinationAirport || "GIG", durationMinutes: 60 },
+                    { airline: "Latam", flightNumber: "LA-3000", time: activity.time, origin: activity.originAirport || "CGH", destination: activity.destinationAirport || "SDU", durationMinutes: 60 },
+                    { airline: "Azul", flightNumber: "AD-4000", time: activity.time, origin: activity.originAirport || "VCP", destination: activity.destinationAirport || "SDU", durationMinutes: 70 }
+                ];
+                openFlightSelectionModal(options);
+                return true; 
             }
-            return "https://www.google.com/maps/search/" + encodeURIComponent(query + " em " + tripData.destination);
+            return false;
         }
 
-        // --- LLM CALL ---
-        async function callGeminiSmart(promptText, systemInstructionText, responseSchema) {
-            var payload = { 
-                contents: [{ parts: [{ text: promptText }] }],
-                systemInstruction: { parts: [{ text: systemInstructionText }] }, 
-                generationConfig: { responseMimeType: "application/json" } 
-            };
+        function openFlightSelectionModal(options) {
+            var list = document.getElementById('flight-options-list');
+            list.innerHTML = '';
+            options.forEach(function(opt, idx) {
+                var div = document.createElement('div');
+                div.className = "border border-gray-200 rounded-lg p-3 hover:bg-blue-50 cursor-pointer transition flex items-center justify-between";
+                div.innerHTML = '<div><div class="font-bold text-gray-800">' + opt.airline + ' ' + opt.flightNumber + '</div><div class="text-sm text-gray-500">' + opt.origin + ' (' + opt.time + ') -> ' + opt.destination + '</div></div><input type="radio" name="flight-opt" value="' + idx + '" class="w-5 h-5 text-blue-600">';
+                div.onclick = function() { var radio = this.querySelector('input'); radio.checked = true; };
+                list.appendChild(div);
+            });
+            var manualDiv = document.createElement('div');
+            manualDiv.className = "border border-gray-200 rounded-lg p-3 hover:bg-blue-50 cursor-pointer transition";
+            manualDiv.innerHTML = '<div class="flex items-center gap-2 mb-2"><input type="radio" name="flight-opt" value="manual" class="w-5 h-5 text-blue-600"><span class="font-bold text-gray-800">Inserir Manualmente</span></div><input type="text" id="manual-flight-input" placeholder="Ex: TAP TP123, 14:00, 90min" class="w-full p-2 border rounded text-sm" onclick="event.stopPropagation()">';
+            list.appendChild(manualDiv);
+            document.getElementById('initial-view').classList.add('hidden');
+            document.getElementById('gap-filling-view').classList.add('hidden');
+            document.getElementById('flight-selection-view').classList.remove('hidden');
+        }
+
+        function confirmFlightSelection() {
+            var selected = document.querySelector('input[name="flight-opt"]:checked');
+            if (!selected) return alert("Selecione uma opção.");
+            var activity = tripData.activities[selectedFlightActivityIndex];
             
-            // Adicionando arquivos ao payload se houver
-            if (selectedFiles.length > 0) {
-                 // Remove o texto inicial e recria o content com arquivos
-                 payload.contents[0].parts = [];
-                 selectedFiles.forEach(f => {
-                     payload.contents[0].parts.push({ inline_data: { mime_type: f.mimeType, data: f.data } });
-                 });
-                 payload.contents[0].parts.push({ text: promptText });
+            if (selected.value === 'manual') {
+                var manualText = document.getElementById('manual-flight-input').value;
+                if(!manualText) return alert("Digite os dados.");
+                activity.description = "Voo " + manualText;
+                activity.flightNumber = manualText.split(' ')[1] || "0000"; 
+                activity.airline = manualText.split(' ')[0] || "Cia";
+                activity.flightDurationMinutes = 120; 
+                delete activity.flightOptions;
+            } else {
+                var opt = tripData.activities[selectedFlightActivityIndex].flightOptions ? 
+                          tripData.activities[selectedFlightActivityIndex].flightOptions[parseInt(selected.value)] : 
+                          [{ airline: "Gol", flightNumber: "G3-1000", time: activity.time, origin: "GRU", destination: "GIG", durationMinutes: 60 }][0];
+                activity.time = opt.time;
+                activity.airline = opt.airline;
+                activity.flightNumber = opt.flightNumber;
+                activity.originAirport = opt.origin;
+                activity.destinationAirport = opt.destination;
+                activity.flightDurationMinutes = opt.durationMinutes;
+                delete activity.flightOptions;
             }
-
-            if (responseSchema) payload.generationConfig.responseSchema = responseSchema;
-
-            for (var i = 0; i < MODELS_TO_TRY.length; i++) {
-                try {
-                    var response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + MODELS_TO_TRY[i] + ":generateContent?key=" + GEMINI_API_KEY, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                    if (response.ok) {
-                        var result = await response.json();
-                        return responseSchema ? JSON.parse(result.candidates[0].content.parts[0].text) : result.candidates[0].content.parts[0].text;
-                    }
-                } catch (e) { console.warn(e); }
-            }
-            throw new Error("Falha na IA.");
+            document.getElementById('flight-selection-view').classList.add('hidden');
+            if (!checkFlightClarification()) checkTransportClarification();
         }
 
-        // --- CORE LOGIC ---
-        window.handleInitialInput = async function() {
-            var inputVal = document.getElementById('initial-input').value;
-            if (!inputVal && selectedFiles.length === 0) return alert('Por favor, diga algo ou anexe um arquivo.');
+        // --- LÓGICA DE PERGUNTAS DE TRANSPORTE ---
+        function checkTransportClarification() {
+            var transportIndex = tripData.activities.findIndex(function(a) { return a.transport === "ASK_USER"; });
+            if (transportIndex !== -1) {
+                selectedTransportActivityIndex = transportIndex;
+                var activity = tripData.activities[transportIndex];
+                missingInfoQueue.push({ key: 'transport_fix_' + transportIndex, q: 'Como vai se deslocar para: ' + activity.description + '?', type: 'text' });
+                askNext();
+                return true;
+            }
+            checkMissingInfo();
+            return false;
+        }
+
+        // --- PROMPT MESTRE ---
+        async function handleInitialInput() {
+            var inputEl = document.getElementById('initial-input');
+            var inputVal = inputEl.value;
+            if (!inputVal || inputVal.trim() === "") return alert('Por favor, diga algo.');
             
-            showLoader();
+            showLoader('A planear logística...');
+            var today = new Date().toLocaleDateString('pt-BR');
+            
+            var examplesStr = ""; 
+            if (typeof MASTER_TRAINING_DATA !== 'undefined' && MASTER_TRAINING_DATA.length > 100) {
+                examplesStr = "\n[DADOS DE TREINO DE ALTA FIDELIDADE (PARCIAL)]\n" + MASTER_TRAINING_DATA + "\n";
+            }
             
             var schemaStructure = {
                 type: "OBJECT",
                 properties: {
                     "missingCriticalInfo": { "type": "STRING" },
                     "tripObjective": { "type": "STRING" },
+                    "weatherForecast": { "type": "STRING" },
                     "origin": { "type": "STRING" },
                     "destination": { "type": "STRING" },
-                    "startDate": { "type": "STRING" }, 
+                    "startDate": { "type": "STRING" },
                     "returnDate": { "type": "STRING" },
                     "accommodation": { "type": "STRING" },
                     "activities": { 
@@ -356,7 +419,13 @@ IV. JSON OBRIGATÓRIO.
                                 "originAirport": { "type": "STRING" },
                                 "destinationAirport": { "type": "STRING" },
                                 "flightDurationMinutes": { "type": "INTEGER" },
-                                "flightOptions": { "type": "ARRAY", "items": { "type": "OBJECT", "properties": { "airline": {"type": "STRING"}, "flightNumber": {"type": "STRING"}, "time": {"type": "STRING"}, "origin": {"type": "STRING"}, "destination": {"type": "STRING"}, "durationMinutes": {"type": "INTEGER"} } } }
+                                "flightOptions": {
+                                    "type": "ARRAY",
+                                    "items": {
+                                        "type": "OBJECT",
+                                        "properties": { "airline": {"type": "STRING"}, "flightNumber": {"type": "STRING"}, "time": {"type": "STRING"}, "origin": {"type": "STRING"}, "destination": {"type": "STRING"}, "durationMinutes": {"type": "INTEGER"} }
+                                    }
+                                }
                             },
                             "required": ["date", "time", "description", "type"]
                         }
@@ -365,205 +434,199 @@ IV. JSON OBRIGATÓRIO.
                 "required": ["activities", "tripObjective"]
             };
 
-            var personaText = document.getElementById('system-instruction').innerText;
-            var userPrompt = "[HOJE]: " + new Date().toLocaleDateString('pt-BR') + "\n[INPUT]: " + JSON.stringify(inputVal);
+            var masterPrompt = "[ROLE]\n" +
+                "Você é o 'ddripp', um planejador logístico expert. Sua única função é transformar o INPUT do usuário em um JSON perfeitamente estruturado, seguindo estritamente as REGRAS e o SCHEMA.\n\n" +
+                "[DATA ATUAL]: " + today + "\n" +
+                examplesStr + "\n" + 
+                "[REGRAS CRÍTICAS]\n" +
+                "1. Extração Compulsória: Extraia CADA evento e informação de viagem presente no texto.\n" +
+                "2. Datas: Converta TODAS as referências relativas (ex: 'próxima terça') para o formato de data YYYY-MM-DD.\n" +
+                "3. Localização: 'location' deve ter APENAS o nome de um lugar pesquisável. NUNCA insira descrições de atividades.\n" +
+                "4. Voo: Voo = atividade 'travel'. NÃO crie 'Embarque' ou 'Chegada'. Se faltar voo/cia, PREENCHA 'flightOptions' com 3 opções prováveis e deixe flightNumber vazio. Se tiver tudo, preencha flightNumber, airline e durationMinutes.\n" +
+                "5. Deslocamento (Transporte): Se não houver informação sobre o meio de transporte, use 'ASK_USER'.\n" +
+                "6. NUNCA faça perguntas no output. Use 'missingCriticalInfo' APENAS para destino/data e 'flightOptions' para voos.\n" +
+                "7. MICRO-DESLOCAMENTO: A LÓGICA DE INSERÇÃO DE TRANSFER DEVE SER REALIZADA PELO CÓDIGO JAVASCRIPT (fillGeographicGaps). A IA SÓ DEVE EXTRAIR EVENTOS PRINCIPAIS.\n\n" +
+                "[JSON SCHEMA DE SAÍDA]\n" +
+                JSON.stringify(schemaStructure, null, 2) + "\n\n" +
+                "[TEXTO DO USUÁRIO PARA ANÁLISE]\n" +
+                "\"" + inputVal + "\"\n\n" +
+                "[JSON]";
 
             try {
-                var result = await callGeminiSmart(userPrompt, personaText, schemaStructure);
+                var result = await callGeminiSmart(masterPrompt, schemaStructure);
                 hideLoader();
-                tripData = { ...tripData, ...result };
-                if(!tripData.activities) tripData.activities = [];
-                selectedFiles = []; // Limpa arquivos após envio
+                if (result) { 
+                    if (typeof result === 'string') {
+                        try {
+                            var cleanResult = result.replace(/```json/g, "").replace(/```/g, "").trim();
+                            tripData = { ...tripData, ...JSON.parse(cleanResult) };
+                        } catch (e) { console.log("Erro parse manual", e); }
+                    } else {
+                        tripData = { ...tripData, ...result };
+                    }
+                    if(!tripData.activities) tripData.activities = [];
+                    
+                    fillGeographicGaps();
 
-                if (!tripData.startDate) {
-                    missingInfoQueue.push({ key: 'startDate', q: "Qual a data de início da viagem (Dia/Mês)?", type: 'date' });
-                    window.askNext();
-                    return;
-                }
-
-                if (window.checkFlightClarification()) return;
-
-                showLoader();
-                await fillGeographicGaps();
-                hideLoader();
-
-                if (tripData.missingCriticalInfo && (tripData.missingCriticalInfo.includes("[LEMBRETE") || !tripData.destination)) {
-                    var q = tripData.missingCriticalInfo;
-                    if (!tripData.destination) q = "Qual o destino da viagem?";
-                    missingInfoQueue.push({ key: 'gap_fill', q: q, type: 'text' });
-                    window.askNext();
-                } else {
-                    window.generateItinerary();
+                    if (checkFlightClarification()) return; 
+                    if (checkTransportClarification()) return;
+                    if (tripData.missingCriticalInfo) {
+                        if (!tripData.destination && tripData.missingCriticalInfo.toLowerCase().includes("destino")) missingInfoQueue.push({ key: 'destination', q: tripData.missingCriticalInfo, type: 'location' });
+                        else if (!tripData.startDate && tripData.missingCriticalInfo.toLowerCase().includes("data")) missingInfoQueue.push({ key: 'startDate', q: tripData.missingCriticalInfo, type: 'date' });
+                    }
+                    checkMissingInfo(); 
                 }
             } catch (e) {
                 hideLoader();
-                alert("Erro: " + e.message);
+                alert("Erro ao processar: " + e.message);
             }
         }
 
-        // SUB-ROTINA DE LÓGICA GEOGRÁFICA E ORDENAÇÃO
-        async function fillGeographicGaps() {
-            if (!tripData.activities.length) return;
-            
-            tripData.activities.sort((a, b) => {
-                var dateA = parseDate(a.date);
-                var dateB = parseDate(b.date);
-                if (dateA - dateB !== 0) return dateA - dateB;
-                return a.time.localeCompare(b.time);
-            });
-            
+        // LÓGICA DE MICRO-DESLOCAMENTOS AUTOMÁTICOS
+        function fillGeographicGaps() {
+            tripData.activities.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
             var newActivities = [];
-            var lastLoc = tripData.accommodation || tripData.origin || "Centro da Cidade"; 
+            var lastKnownLocation = tripData.accommodation || tripData.origin || null;
+            var isFirstTransfer = true; 
 
             for (var i = 0; i < tripData.activities.length; i++) {
                 var curr = tripData.activities[i];
                 
-                if (['meal', 'leisure', 'free_time'].includes(curr.type)) {
-                    curr.contextualLink = generateContextualSearchLink(curr.description, lastLoc);
-                } else if (curr.location) {
-                    lastLoc = curr.location;
-                }
+                // --- TRATAMENTO DE VOO E TRANSFER DE CHEGADA ---
+                if (curr.type === 'travel' && curr.destinationAirport && curr.flightNumber) {
+                    newActivities.push(curr); // Mantém o voo original
+                    
+                    // 1. Calcular Desembarque e Tempo de Espera (30 min)
+                    var arrivalTime = addTime(curr.time, curr.flightDurationMinutes || 120);
+                    var transferStart = addTime(arrivalTime, 30);
+                    
+                    var nextLocation = tripData.accommodation || null;
+                    
+                    if (i < tripData.activities.length - 1) {
+                        var next = tripData.activities[i+1];
+                        if(next.location && !next.location.toLowerCase().includes("aeroporto")) {
+                            nextLocation = next.location;
+                        }
+                    } else if (!tripData.accommodation) {
+                        nextLocation = tripData.destination || null;
+                    }
+                    
+                    var transferDestinationName = nextLocation || "Acomodação/Ponto de Encontro";
+                    if (tripData.returnDate && curr.date === tripData.returnDate && curr.destinationAirport.includes(tripData.origin)) {
+                        transferDestinationName = "Casa / Origem";
+                    }
 
-                if (curr.type === 'travel' && curr.location && curr.location.includes(' para ')) {
-                    var parts = curr.location.split(' para ');
-                    var origin = parts[0];
-                    var dest = parts[1];
-                    var link = generateDirectionsLink(origin, dest);
-                    curr.mapRouteLink = link;
-                    curr.displayDescription = (curr.transport || "Transporte") + " de " + origin + " para " + dest;
-                    newActivities.push(curr);
-                    lastLoc = dest;
+                    if (nextLocation && !nextLocation.includes(curr.destinationAirport)) {
+                        newActivities.push({
+                            date: curr.date,
+                            time: transferStart,
+                            person: curr.person,
+                            description: "Transfer Aeroporto (" + curr.destinationAirport + ") -> " + transferDestinationName,
+                            location: curr.destinationAirport + " para " + transferDestinationName,
+                            type: "travel",
+                            transport: "Transfer/Uber"
+                        });
+                        lastKnownLocation = transferDestinationName;
+                    } else {
+                        lastKnownLocation = curr.destinationAirport;
+                    }
+                    isFirstTransfer = false;
                     continue;
                 }
-                
-                if (curr.type === 'travel' && curr.flightNumber) {
-                    newActivities.push(curr);
-                    lastLoc = curr.destinationAirport;
-                    continue;
-                }
 
-                if (curr.location && lastLoc && curr.location !== lastLoc && !curr.location.includes(lastLoc) && curr.type !== 'travel') {
-                      var mins = await getTravelTimeMinutes(lastLoc, curr.location);
-                      var link = generateDirectionsLink(lastLoc, curr.location);
-                      
-                      newActivities.push({
-                        date: curr.date, 
-                        time: subtractTime(curr.time, mins + 15), 
-                        person: curr.person,
-                        description: "Deslocamento", 
-                        displayDescription: "🚗 " + lastLoc + " ➝ " + curr.location + " (" + mins + " min)", 
-                        location: lastLoc + " para " + curr.location,
-                        type: 'travel', 
-                        transport: 'Uber/Transfer',
-                        mapRouteLink: link
-                      });
-                      lastLoc = curr.location;
+                // --- TRATAMENTO DE DESLOCAMENTO URBANO ---
+                if (curr.location) {
+                    var cleanedLastLocation = lastKnownLocation ? lastKnownLocation.split(' para ')[lastKnownLocation.split(' para ').length - 1] : null;
+                    
+                    if (cleanedLastLocation && curr.location !== cleanedLastLocation && !curr.description.includes(cleanedLastLocation)) {
+                        var travelTime = subtractTime(curr.time, 45); 
+                        newActivities.push({
+                            date: curr.date,
+                            time: travelTime,
+                            person: curr.person,
+                            description: "Deslocamento: " + cleanedLastLocation + " -> " + curr.location,
+                            location: cleanedLastLocation + " para " + curr.location,
+                            type: "travel",
+                            transport: "Deslocamento Urbano"
+                        });
+                    }
+                    lastKnownLocation = curr.location;
                 }
                 newActivities.push(curr);
             }
-            tripData.activities = newActivities;
+            tripData.activities = newActivities.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
         }
 
-        window.checkFlightClarification = function() {
-            var idx = tripData.activities.findIndex(a => a.type === 'travel' && a.flightOptions && a.flightOptions.length > 0);
-            if (idx !== -1) {
-                selectedFlightActivityIndex = idx;
-                window.openFlightSelectionModal(tripData.activities[idx].flightOptions);
-                return true;
-            }
-            return false;
+        function checkMissingInfo() {
+            if (!tripData.destination && missingInfoQueue.length === 0) missingInfoQueue.push({ key: 'destination', q: 'Qual o destino da viagem?', type: 'location' });
+            if (!tripData.startDate && missingInfoQueue.length === 0) missingInfoQueue.push({ key: 'startDate', q: 'Qual a data de início?', type: 'date' });
+            if (!tripData.returnDate && missingInfoQueue.length === 0) missingInfoQueue.push({ key: 'returnDate', q: 'Qual a data de retorno?', type: 'date' });
+            if (missingInfoQueue.length > 0) askNext();
+            else generateItinerary();
         }
 
-        window.openFlightSelectionModal = function(options) {
-            var list = document.getElementById('flight-options-list');
-            list.innerHTML = '';
-            options.forEach((opt, idx) => {
-                list.innerHTML += `<div onclick="selectFlight(${idx})" class="border p-3 rounded cursor-pointer hover:bg-blue-50 mb-2">
-                    <div class="font-bold text-blue-600">${opt.airline} ${opt.flightNumber}</div>
-                    <div class="text-sm text-gray-600">${opt.origin} (${opt.time}) ➝ ${opt.destination}</div>
-                </div>`;
-            });
-            document.getElementById('initial-view').classList.add('hidden');
-            document.getElementById('flight-selection-view').classList.remove('hidden');
-        }
-        
-        window.cancelFlightSelection = function() {
-             document.getElementById('flight-selection-view').classList.add('hidden');
-             tripData.activities.splice(selectedFlightActivityIndex, 1); 
-             showLoader();
-             fillGeographicGaps().then(() => { hideLoader(); window.generateItinerary(); });
-        }
-
-        window.selectFlight = function(idx) {
-            var act = tripData.activities[selectedFlightActivityIndex];
-            var opt = act.flightOptions[idx];
-            act.time = opt.time; act.airline = opt.airline; act.flightNumber = opt.flightNumber;
-            act.originAirport = opt.origin; act.destinationAirport = opt.destination;
-            act.flightDurationMinutes = opt.durationMinutes;
-            delete act.flightOptions;
-            document.getElementById('flight-selection-view').classList.add('hidden');
-            if (!window.checkFlightClarification()) {
-                showLoader();
-                fillGeographicGaps().then(() => { hideLoader(); window.generateItinerary(); });
-            }
-        }
-
-        window.askNext = function() {
+        function askNext() {
             var q = missingInfoQueue[0];
             document.getElementById('gap-question').textContent = q.q;
-            if (q.type === 'date') {
-                document.getElementById('gap-input').type = 'date';
-                document.getElementById('gap-input').placeholder = '';
+            var input = document.getElementById('gap-input');
+            input.value = '';
+            if (autocomplete) google.maps.event.clearInstanceListeners(input);
+            if (q.type === 'location' && typeof google !== 'undefined') {
+                input.type = 'text';
+                autocomplete = new google.maps.places.Autocomplete(input);
+            } else if (q.type === 'date') {
+                input.type = 'date';
             } else {
-                document.getElementById('gap-input').type = 'text';
-                document.getElementById('gap-input').placeholder = 'Sua resposta...';
+                input.type = 'text';
             }
-            document.getElementById('initial-view').classList.add('hidden');
             document.getElementById('gap-filling-view').classList.remove('hidden');
+            document.getElementById('initial-view').classList.add('hidden');
+            input.focus();
         }
 
-        window.handleGapInput = function() {
+        function handleGapInput() {
             var val = document.getElementById('gap-input').value;
-            if(!val) return;
-            
-            if (document.getElementById('gap-input').type === 'date') {
-                var parts = val.split('-'); 
-                val = parts[2] + '/' + parts[1] + '/' + parts[0];
-            }
-
-            if (missingInfoQueue[0].key !== 'gap_fill') {
+            if (!val) return alert('Responda por favor.');
+            if (missingInfoQueue[0].key.startsWith('transport_fix_')) {
+                var idx = parseInt(missingInfoQueue[0].key.split('_')[2]);
+                tripData.activities[idx].transport = val;
+                tripData.activities[idx].description += " (" + val + ")";
+            } else {
                 tripData[missingInfoQueue[0].key] = val;
             }
             missingInfoQueue.shift();
-            if(missingInfoQueue.length > 0) window.askNext();
+            if (missingInfoQueue.length > 0) askNext();
             else {
                 document.getElementById('gap-filling-view').classList.add('hidden');
-                showLoader();
-                fillGeographicGaps().then(() => { hideLoader(); window.generateItinerary(); });
+                if (checkTransportClarification()) return;
+                generateItinerary();
             }
         }
 
-        window.generateItinerary = function() {
+        function generateItinerary() {
             document.getElementById('initial-view').classList.add('hidden');
             document.getElementById('itinerary-view').classList.remove('hidden');
             document.getElementById('fixed-footer-input').classList.remove('hidden');
+            document.getElementById('trip-title').textContent = tripData.tripObjective || ("Viagem para " + tripData.destination);
+            var destEl = document.getElementById('trip-destination');
+            destEl.textContent = tripData.destination;
+            var wikiLink = document.getElementById('trip-destination-link');
+            if(tripData.destination) wikiLink.href = "https://pt.wikipedia.org/wiki/Special:Search?search=" + encodeURIComponent(tripData.destination);
+            else wikiLink.style.display = 'none';
+            document.getElementById('trip-date').textContent = tripData.startDate + " a " + tripData.returnDate;
+            var weatherBox = document.getElementById('weather-box');
+            var weatherEl = document.getElementById('trip-weather');
+            if (tripData.weatherForecast) {
+                weatherEl.textContent = tripData.weatherForecast;
+                weatherBox.classList.remove('hidden');
+            } else {
+                weatherBox.classList.add('hidden');
+            }
             
-            document.getElementById('trip-title').textContent = tripData.tripObjective || "Viagem";
-            document.getElementById('trip-destination').textContent = tripData.destination;
-            
-            var wikiLink = "https://pt.wikipedia.org/wiki/" + encodeURIComponent(tripData.destination);
-            document.getElementById('trip-destination-link').href = wikiLink;
-            
-            var sDate = tripData.startDate ? tripData.startDate.split('/').slice(0,3).join('/') : '';
-            var eDate = tripData.returnDate ? tripData.returnDate.split('/').slice(0,3).join('/') : '';
-            if (sDate.length > 8) sDate = sDate.slice(0,6) + sDate.slice(8); 
-            if (eDate.length > 8) eDate = eDate.slice(0,6) + eDate.slice(8);
-            
-            document.getElementById('trip-date-range').textContent = sDate + " - " + eDate;
-            
-            // WARMUP DO SERVIDOR (Só para acordar)
+            // WARMUP DO SERVIDOR
             if (SERVER_SHARE_URL && SERVER_SHARE_URL.includes("http")) {
                 var dest = tripData.destination || "Viagem";
+                var sDate = tripData.startDate || "";
                 var pingUrl = `${SERVER_SHARE_URL}?title=Ping&dest=${encodeURIComponent(dest)}&date=${encodeURIComponent(sDate)}&warmup=true`;
                 fetch(pingUrl, { mode: 'no-cors' }).catch(e => console.log("Servidor acordado!"));
             }
@@ -574,109 +637,170 @@ IV. JSON OBRIGATÓRIO.
         function renderItinerary() {
             var container = document.getElementById('itinerary-content');
             container.innerHTML = '';
-            var days = {};
-            tripData.activities.forEach(act => { if (!days[act.date]) days[act.date] = []; days[act.date].push(act); });
-
-            Object.keys(days).sort((a,b) => parseDate(a) - parseDate(b)).forEach(date => {
-                var html = `<h3 class="sticky-header text-lg font-bold text-blue-800 border-b border-blue-100 mb-4 bg-[#f8f9fa] py-2 px-4">${date}</h3><div class="bg-white rounded-2xl card-shadow overflow-hidden">`;
-                
-                days[date].forEach(act => {
-                    if (act.type === 'travel' && act.flightNumber) {
-                         html += `<details class="group border-b border-gray-50 last:border-0">
-                            <summary class="p-4 hover:bg-blue-50 list-none cursor-pointer">
-                                <div class="itinerary-grid">
-                                    <div class="font-bold text-gray-700 text-lg">${act.time}</div>
-                                    <div class="text-center"><span class="text-xs font-bold text-blue-600 bg-blue-100 px-2 py-1 rounded-full inline-block break-words leading-tight w-full">${act.person || 'Todos'}</span></div>
-                                    <div>
-                                        <div class="flex justify-between items-center">
-                                            <span class="font-bold text-blue-600 text-base"><i class="fas fa-plane mr-2"></i>${act.airline} ${act.flightNumber}</span>
-                                            <i class="fas fa-chevron-down text-gray-400 text-sm group-open:rotate-180 transition-transform"></i>
-                                        </div>
-                                        <div class="text-xs text-gray-500 mt-1">${act.originAirport} <i class="fas fa-arrow-right mx-1"></i> ${act.destinationAirport}</div>
-                                    </div>
-                                </div>
-                            </summary>
-                            <div class="bg-blue-50 p-4 text-sm text-gray-600">
-                                <div class="timeline-container">
-                                    <div class="flight-event"><strong>${subtractTime(act.time, 120)}</strong> Chegada ao Aeroporto e despacho de bagagens</div>
-                                    <div class="flight-event"><strong>${subtractTime(act.time, 40)}</strong> Início do Embarque</div>
-                                    <div class="flight-event"><strong>${act.time}</strong> Decolagem Prevista</div>
-                                    <div class="flight-event"><strong>${addTime(act.time, act.flightDurationMinutes||120)}</strong> Previsão de Aterrissagem</div>
-                                </div>
-                            </div>
-                        </details>`;
-                    } else {
-                        var icon = getIcon(act.type);
-                        var linkUrl = "#";
-                        var linkClass = "pointer-events-none text-gray-800"; 
-                        var displayText = act.description;
-
-                        if (act.contextualLink) {
-                            linkUrl = act.contextualLink;
-                            linkClass = "text-blue-600 hover:underline cursor-pointer";
-                        } else if (act.type === 'travel' && act.mapRouteLink) {
-                            linkUrl = act.mapRouteLink;
-                            displayText = act.displayDescription || act.description;
-                            linkClass = "map-link-text text-sm font-medium";
-                        } else if (act.location) {
-                            linkUrl = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(act.location);
-                            linkClass = "text-blue-600 hover:underline cursor-pointer";
-                        }
-
-                        html += `<div class="itinerary-grid hover:bg-gray-50 border-b border-gray-50 last:border-0">
-                            <div class="font-bold text-gray-700 pt-1 text-lg">${act.time}</div>
-                            <div class="text-center"><span class="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-full inline-block break-words leading-tight w-full">${act.person || 'Todos'}</span></div>
-                            <div>
-                                <div class="flex items-start">
-                                    <div class="mr-3 mt-1 w-6 text-center text-gray-400">${icon}</div>
-                                    <div class="flex-grow">
-                                        <a href="${linkUrl}" target="_blank" class="${linkClass} block">
-                                            ${displayText} ${linkUrl !== '#' ? '<i class="fas fa-external-link-alt text-[10px] ml-1 opacity-50"></i>' : ''}
-                                        </a>
-                                        ${(act.location && act.type !== 'travel') ? `<span class="text-xs text-gray-400 block mt-1"><i class="fas fa-map-marker-alt mr-1"></i>${act.location}</span>` : ''}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>`;
-                    }
+            if(tripData.activities) {
+                tripData.activities.sort(function(a, b) { return (a.date + a.time).localeCompare(b.date + b.time); });
+                var days = {};
+                tripData.activities.forEach(function(act) {
+                    if (!days[act.date]) days[act.date] = [];
+                    days[act.date].push(act);
                 });
-                html += '</div>';
-                container.innerHTML += html;
+                Object.keys(days).sort().forEach(function(date) {
+                    var dayDiv = document.createElement('div');
+                    var parts = date.split('-');
+                    var dateStr = date;
+                    if(parts.length === 3) dateStr = parts[2] + '/' + parts[1]; 
+                    
+                    var htmlContent = '<h3 class="sticky-header text-lg font-bold text-blue-800 uppercase tracking-wide border-b border-blue-100 mb-4 bg-[#f8f9fa]">' + dateStr + '</h3>' +
+                        '<div class="bg-white rounded-2xl card-shadow overflow-hidden">';
+                            
+                    days[date].forEach(function(act) {
+                        if (act.type === 'travel' && act.flightNumber) { 
+                            var flightTime = act.time;
+                            var boardingTime = subtractTime(flightTime, 40); 
+                            var arrivalAirportTime = subtractTime(flightTime, 120); 
+                            var duration = act.flightDurationMinutes || 120; 
+                            var landingTime = addTime(flightTime, duration);
+                            var transferTime = addTime(landingTime, 30);
+                            var transferDest = tripData.accommodation || 'Acomodação/Hotel';
+                            if (tripData.origin && act.destinationAirport) {
+                                if (act.date === tripData.returnDate) transferDest = "Casa / Origem";
+                                // Tenta achar o destino do transfer criado em fillGeographicGaps
+                                var transferAct = tripData.activities.find(a => a.date === act.date && a.description.startsWith("Transfer Aeroporto") && a.time === transferTime);
+                                if (transferAct) {
+                                    transferDest = transferAct.location.split('para ')[1] || transferDest;
+                                }
+                            }
+
+                            htmlContent += 
+                                '<details class="group">' +
+                                    '<summary class="p-4 border-b border-gray-50 hover:bg-blue-50 transition last:border-0 list-none">' +
+                                        '<div class="itinerary-grid">' +
+                                            '<div class="font-bold text-gray-700">' + act.time + '</div>' +
+                                            '<div class="text-xs font-bold text-blue-600 bg-blue-100 px-2 py-1 rounded-full text-center self-center w-full truncate">' + (act.person || 'Todos') + '</div>' +
+                                            '<div>' +
+                                                '<div class="flex items-center justify-between">' +
+                                                    '<span class="font-bold text-blue-600"><i class="fas fa-plane-departure mr-2"></i>Decolagem ' + (act.airline || '') + ' ' + (act.flightNumber || '') + '</span>' +
+                                                    '<i class="fas fa-chevron-down text-gray-400 group-open:rotate-180 transition"></i>' +
+                                                '</div>' +
+                                                '<div class="text-xs text-gray-500 mt-1">' +
+                                                    '<span>' + (act.originAirport || 'Origem') + '</span> <i class="fas fa-long-arrow-alt-right"></i> <span>' + (act.destinationAirport || 'Destino') + '</span>' +
+                                                '</div>' +
+                                            '</div>' +
+                                        '</div>' +
+                                    '</summary>' +
+                                    '<div class="bg-blue-50/50 p-4 text-sm text-gray-600 border-b border-blue-100">' +
+                                        '<div class="timeline-container">' +
+                                            '<div class="flight-event"><div class="flight-dot"></div><div class="font-bold text-gray-700">' + arrivalAirportTime + '</div><div>Chegada no aeroporto, bagagens e check-in.</div></div>' +
+                                            '<div class="flight-event"><div class="flight-dot"></div><div class="font-bold text-gray-700">' + boardingTime + '</div><div>Embarque no portão.</div></div>' +
+                                            '<div class="flight-event"><div class="flight-dot active"></div><div class="font-bold text-blue-700">' + act.time + '</div><div>Decolagem.</div></div>' +
+                                            '<div class="flight-event"><div class="flight-dot"></div><div class="font-bold text-gray-700">' + landingTime + '</div><div>Desembarque e bagagens.</div></div>' +
+                                            '<div class="flight-event"><div class="flight-dot"></div><div class="font-bold text-gray-700">' + transferTime + '</div><div>Transfer para: <strong>' + transferDest + '</strong></div></div>' +
+                                        '</div>' +
+                                    '</div>' +
+                                '</details>';
+                        } else {
+                            var locationHtml = '';
+                            if (act.location) {
+                                var mapQuery = encodeURIComponent(act.location);
+                                var isRoute = act.type === 'travel' || act.description.toLowerCase().includes('deslocamento');
+                                var urlMap = isRoute ? 'https://www.google.com/maps/dir/?api=1&destination=' + mapQuery : 'https://www.google.com/maps/search/?api=1&query=' + mapQuery;
+                                locationHtml = '<a href="' + urlMap + '" target="_blank" class="map-link">' + act.location + '</a>';
+                            }
+                            
+                            htmlContent += '<div class="itinerary-grid hover:bg-gray-50 border-b border-gray-50 last:border-0">' +
+                                '<div class="font-bold text-gray-700 pt-1">' + (act.time || '--:--') + '</div>' +
+                                '<div class="text-center"><span class="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-full inline-block w-full truncate">' + (act.person || 'Todos') + '</span></div>' +
+                                '<div>' +
+                                    '<div class="flex items-start">' +
+                                        '<div class="mr-3 mt-1">' + getIcon(act.type) + '</div>' +
+                                        '<div>' +
+                                            '<span class="font-semibold text-gray-800 text-lg block leading-tight">' + act.description + '</span>' +
+                                            (locationHtml ? '<span class="text-sm font-medium block mt-1">' + locationHtml + '</span>' : '') +
+                                            (act.transport ? '<span class="text-xs text-gray-400 ml-2 bg-gray-100 px-2 py-0.5 rounded"><i class="fas fa-car mr-1"></i>' + act.transport + '</span>' : '') +
+                                        '</div>' +
+                                    '</div>' +
+                                '</div>' +
+                            '</div>';
+                        }
+                    });
+                    htmlContent += '</div>';
+                    dayDiv.innerHTML = htmlContent;
+                    container.appendChild(dayDiv);
+                });
+            }
+        }
+
+        function getIcon(type) {
+            var map = { 'travel': '<i class="fas fa-plane text-blue-500 text-xl"></i>', 'meal': '<i class="fas fa-utensils text-orange-500 text-xl"></i>', 'leisure': '<i class="fas fa-camera text-green-500 text-xl"></i>', 'commitment': '<i class="fas fa-briefcase text-purple-500 text-xl"></i>' };
+            return map[type] || '<i class="fas fa-circle text-gray-300 text-xs"></i>';
+        }
+
+        async function handleAdjustmentInput() {
+            var input = document.getElementById('adjustment-input');
+            var text = input.value;
+            if (!text.trim()) return;
+            showLoader('Ajustando...');
+            var prompt = "Roteiro ATUAL: " + JSON.stringify(tripData.activities) + ". AJUSTE: \"" + text + "\". Mantenha JSON.";
+            try {
+                var result = await callGeminiSmart(prompt, null);
+                hideLoader();
+                if (result) { 
+                     if (typeof result === 'string') {
+                        try {
+                            var cleanResult = result.replace(/```json/g, "").replace(/```/g, "").trim();
+                            var parsed = JSON.parse(cleanResult);
+                            if(parsed.activities) tripData.activities = parsed.activities;
+                            else if(Array.isArray(parsed)) tripData.activities = parsed;
+                        } catch (e) { console.log("Erro parse ajuste", e); }
+                    }
+                    renderItinerary(); 
+                    input.value = ''; 
+                    alert('Atualizado!'); 
+                }
+            } catch (e) {
+                hideLoader();
+                alert("Erro: " + e.message);
+            }
+        }
+
+        function shareTrip() {
+            var text = "Meu Roteiro para " + tripData.destination;
+            window.open("https://api.whatsapp.com/send?text=" + encodeURIComponent(text));
+        }
+
+        function downloadPDF() {
+            var { jsPDF } = window.jspdf;
+            var element = document.getElementById('itinerary-view');
+            var buttons = document.getElementById('trip-footer');
+            if(buttons) buttons.classList.add('hidden');
+
+            html2canvas(element, { scale: 2 }).then(function(canvas) {
+                var imgData = canvas.toDataURL('image/png');
+                var pdf = new jsPDF('p', 'mm', 'a4');
+                var pdfWidth = pdf.internal.pageSize.getWidth();
+                var pdfHeight = pdf.internal.pageSize.getHeight();
+                var margin = 10;
+                var contentWidth = pdfWidth - (margin * 2);
+                var contentHeight = (canvas.height * contentWidth) / canvas.width;
+                var position = 0; 
+                var heightLeft = contentHeight; 
+                var pageHeightMM = pdfHeight - (margin * 2);
+                pdf.addImage(imgData, 'PNG', margin, margin + position, contentWidth, contentHeight);
+                    heightLeft -= pageHeightMM;
+                while (heightLeft > 0) {
+                    position = heightLeft - contentHeight; 
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'PNG', margin, margin + position, contentWidth, contentHeight);
+                    heightLeft -= pageHeightMM;
+                }
+                pdf.save("roteiro.pdf");
+                if(buttons) buttons.classList.remove('hidden');
+            }).catch(function(err) {
+                 console.error(err);
+                 alert("Erro ao gerar PDF.");
+                 if(buttons) buttons.classList.remove('hidden');
             });
         }
-
-        function getIcon(type) { 
-            var icons = { 
-                'travel': '<i class="fas fa-car"></i>', 
-                'meal': '<i class="fas fa-utensils"></i>', 
-                'leisure': '<i class="fas fa-camera"></i>', 
-                'commitment': '<i class="fas fa-briefcase"></i>',
-                'free_time': '<i class="fas fa-walking"></i>'
-            }; 
-            return icons[type] || '<i class="fas fa-map-pin"></i>'; 
-        }
-        
-        window.toggleVoice = function(id, btn) { 
-            if (!('webkitSpeechRecognition' in window)) return alert("Use Chrome."); 
-            var recognition = new webkitSpeechRecognition(); 
-            recognition.lang = "pt-BR"; 
-            recognition.onresult = function(e) { document.getElementById(id).value += " " + e.results[0][0].transcript; }; 
-            recognition.start(); 
-        }
-        
-        window.shareTrip = function() { 
-            var jsonStr = encodeURIComponent(JSON.stringify(tripData));
-            var base64Data = btoa(jsonStr);
-            var finalShareUrl = SERVER_SHARE_URL.includes("SEU-LINK") ? 
-                                window.location.href.split('?')[0] + "?data=" + base64Data : 
-                                `${SERVER_SHARE_URL}?title=${encodeURIComponent(tripData.tripObjective)}&dest=${encodeURIComponent(tripData.destination)}&date=${encodeURIComponent(tripData.startDate)}&data=${base64Data}`;
-            
-            var text = `✈️ *Roteiro ddripp: ${tripData.destination}*\n📅 ${tripData.startDate}\n🔗 ${finalShareUrl}`;
-            window.open("https://api.whatsapp.com/send?text=" + encodeURIComponent(text)); 
-        }
-
-        window.downloadPDF = function() { alert("Gerar PDF em breve!"); }
-        window.handleAdjustmentInput = function() { alert("Ajuste em breve!"); }
     </script>
 </body>
 </html>
