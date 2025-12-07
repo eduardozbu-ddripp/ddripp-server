@@ -15,13 +15,14 @@
     <!-- Fontes -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 
-    <!-- FIREBASE SECURITY & ANALYTICS (Novo Bloco) -->
+    <!-- FIREBASE INIT (Baseado no seu arquivo 'cdn firebase.txt') -->
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
       import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-analytics.js";
 
+      // Configuração extraída do seu arquivo anexo
       const firebaseConfig = {
-        apiKey: "AIzaSyCVipGZZc7Pd2d2cjg_90RKXfzPC2vS4jk", // Nova Chave do Firebase
+        apiKey: "AIzaSyCVipGZZc7Pd2d2cjg_90RKXfzPC2vS4jk",
         authDomain: "ddripp2.firebaseapp.com",
         projectId: "ddripp2",
         storageBucket: "ddripp2.firebasestorage.app",
@@ -30,17 +31,25 @@
         measurementId: "G-ENQ9Y0EKCB"
       };
 
-      const app = initializeApp(firebaseConfig);
-      const analytics = getAnalytics(app);
-      console.log("Firebase conectado com sucesso.");
+      try {
+          const app = initializeApp(firebaseConfig);
+          const analytics = getAnalytics(app);
+          console.log("Firebase Security: Ativado");
+      } catch (e) {
+          console.warn("Erro ao iniciar Firebase:", e);
+      }
     </script>
 
-    <!-- Google Maps Loader (Usando a NOVA chave do Firebase) -->
+    <!-- Google Maps Loader (Usando a chave nova do Firebase) -->
     <script>
         (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
-            key: "AIzaSyCVipGZZc7Pd2d2cjg_90RKXfzPC2vS4jk", // <--- Chave atualizada do seu arquivo Firebase
+            key: "AIzaSyCVipGZZc7Pd2d2cjg_90RKXfzPC2vS4jk", // <--- Chave do Firebase (Mapa Seguro)
             v: "weekly",
         });
+    </script>
+
+    <script>
+        window.initMap = function() { console.log("Google Maps API loaded."); }
     </script>
 
     <style>
@@ -93,7 +102,7 @@
             border-radius: 0.75rem !important;
             border: 1px solid #e5e7eb !important;
             width: 100%;
-            font-size: 1.125rem !important; /* text-lg */
+            font-size: 1.125rem !important;
         }
     </style>
 </head>
@@ -112,7 +121,7 @@
         <div id="initial-view" class="flex flex-col items-center justify-center min-h-[60vh]">
              <header class="text-center mb-8">
                 <h1 class="text-6xl font-bold text-gray-800 tracking-tighter">ddripp</h1>
-                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V12 (Firebase Secure)</p>
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V13 (Firebase Secured)</p>
             </header>
             
             <div class="bg-white p-8 rounded-2xl card-shadow w-full relative max-w-2xl">
@@ -144,7 +153,7 @@
             </div>
         </div>
 
-        <!-- Tela 2: Lacunas (COM NOVO AUTOCOMPLETE) -->
+        <!-- Tela 2: Lacunas (COM NOVO AUTOCOMPLETE FIREBASE) -->
         <div id="gap-filling-view" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
             <div class="bg-white p-8 rounded-2xl card-shadow w-full max-w-md text-center relative">
                 <h3 id="gap-question" class="font-bold text-xl mb-6 text-gray-800"></h3>
@@ -221,11 +230,10 @@
     
     <script>
         // =================================================================
-        // ATENÇÃO: PREENCHA SUA CHAVE DE INTELIGÊNCIA ARTIFICIAL (GEMINI) AQUI
-        // Você pediu para manter esta lógica separada para você preencher
+        // ATENÇÃO: PREENCHA SUA CHAVE GEMINI (INTELIGÊNCIA) AQUI
         // =================================================================
-        var KEY_PART_1 = "AIzaSyCVipGZZc7Pd2d2cjg_"; // Ex: "AIzaSy..."
-        var KEY_PART_2 = "90RKXfzPC2vS4jk"; // Ex: "...89zT..."
+        var KEY_PART_1 = "AIzaSyDpIh6fNWjKRmA0Z"; // Ex: "AIzaSy..."
+        var KEY_PART_2 = "Ve9mz_2tfhCXZrZSFQ"; // Ex: "...89zT..."
         var GEMINI_API_KEY = KEY_PART_1 + KEY_PART_2; 
         
         var SERVER_SHARE_URL = "https://ddripp-server.onrender.com/share"; 
