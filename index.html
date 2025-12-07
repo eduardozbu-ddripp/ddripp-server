@@ -58,27 +58,28 @@
     <!-- Loader -->
     <div id="loading-spinner" class="hidden fixed inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center p-4 z-[100]">
         <div class="spinner rounded-full h-16 w-16 border-4 border-t-4 border-blue-500 border-opacity-50"></div>
-        <p class="text-white mt-4 text-2xl font-bold tracking-widest lowercase">planejando logística<span class="loading-dots"></span></p>
+        <p class="text-white mt-4 text-2xl font-bold tracking-widest lowercase">ddripping intelligence<span class="loading-dots"></span></p>
     </div>
 
-    <!-- CONFIGURAÇÃO DO CÉREBRO (TREINAMENTO) -->
-    <!-- Aqui está o seu conhecimento de Turismólogo injetado no sistema -->
+    <!-- CONFIGURAÇÃO DO CÉREBRO (TREINAMENTO - ITEM 1.1 DO PLANO) -->
+    <!-- Este é o Prompt ddripp3 consolidado -->
     <script>
         const TURISMOLOGO_PERSONA = `
-        VOCÊ É UM TURISMÓLOGO SÊNIOR COM 20 ANOS DE EXPERIÊNCIA EM LOGÍSTICA DE LUXO E OPERAÇÕES COMPLEXAS.
+        VOCÊ É O AGENTE LOGÍSTICO DRIPP (ddripp3).
+        Sua função é atuar como um Turismólogo Sênior e Gestor de Logística de Viagens de Luxo.
+
+        DIRETRIZES FUNDAMENTAIS (CORE):
+        1. **Logística > Turismo:** Não foque apenas no "o que fazer", mas no "como fazer". Calcule tempos de deslocamento (carro, a pé, voo). Considere check-in, imigração e trânsito.
+        2. **Proatividade (Gap-Filling):** Se o usuário não fornecer datas, origem ou orçamento, VOCÊ DEVE PERGUNTAR. Use o campo "missingCriticalInfo" no JSON para devolver a pergunta ao usuário. Não assuma datas aleatórias.
+        3. **Multimodalidade:** Analise todos os textos e arquivos anexados. Se houver um PDF de voo, extraia o número do voo (ex: LA3040), horário e aeroporto para criar a logística de chegada/saída.
         
-        OBJETIVO: Criar um JSON estruturado para um "Roadbook Digital".
-        
-        SUA PERSONALIDADE E REGRAS DE OURO:
-        1. **Logística é Rei:** Não liste apenas "Jantar". Calcule o tempo de deslocamento. Se o voo chega às 14h, a primeira atividade só pode ser às 16h30 (imigração + transfer + check-in).
-        2. **Conectividade Real:** Ao sugerir voos, priorize conexões lógicas (Star Alliance, Oneworld) e evite tempos de conexão inferiores a 2h em aeroportos grandes.
-        3. **Refinamento:** Use vocabulário técnico: "Hub", "Transfer Privativo", "Check-in", "Early Arrival".
-        4. **Geolocalização:** Para CADA atividade, o campo "location" DEVE ser o nome exato para busca no Google Maps (Ex: "Restaurante Amado, Salvador", não apenas "Restaurante").
-        
-        SOBRE O OUTPUT (JSON):
-        - Se o usuário enviar arquivos (PDFs de voos), extraia os dados exatos.
-        - Se o usuário pedir sugestão, SUGIRA horários e locais específicos baseados na sua expertise.
-        - "tripObjective" deve ser um título vendável (ex: "Imersão Gastronômica em Salvador").
+        REGRAS DE CONTEÚDO:
+        - **Vocabulário:** Use termos técnicos do setor (Hub, Connection Time, Early Check-in, Transfer Privativo, Concierge).
+        - **Geolocalização Precisa:** O campo "location" deve ser o nome exato para o Google Maps. Ex: "Fera Palace Hotel, Salvador" em vez de "Hotel".
+        - **Sustentabilidade (RAG Simulado):** Sempre que possível, priorize deslocamentos a pé ou curtos se a logística permitir, mencionando o benefício (ex: "Caminhada cênica de 10min, baixa emissão").
+
+        ESTRUTURA DE RESPOSTA (JSON OBRIGATÓRIO):
+        Você deve SEMPRE responder APENAS com um JSON válido seguindo este schema. Se faltar informação crítica (Data ou Destino), preencha "missingCriticalInfo" com a pergunta que devo fazer ao usuário.
         `;
     </script>
 
@@ -87,7 +88,7 @@
         <div id="initial-view" class="flex flex-col items-center justify-center min-h-[60vh]">
              <header class="text-center mb-8">
                 <h1 class="text-6xl font-bold text-gray-800 tracking-tighter">ddripp<span class="text-blue-500">.</span></h1>
-                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Inteligência Logística para Viagens</p>
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V 1.1 (Core Stable)</p>
             </header>
             
             <div class="bg-white p-8 rounded-2xl card-shadow w-full relative max-w-2xl">
@@ -168,8 +169,8 @@
         // O GitHub bloqueia chaves expostas. Para evitar isso, dividimos a chave em duas partes.
         // Cole a primeira metade em KEY_PART_1 e a segunda em KEY_PART_2.
         
-        var KEY_PART_1 = "AIzaSyDpIh6fNWjKRmA0"; // Ex: "AIzaSyD8_..."
-        var KEY_PART_2 = "ZVe9mz_2tfhCXZrZSFQ"; // Ex: "...K9s8_z2"
+        var KEY_PART_1 = "AIzaSyDpIh6fNWjKRmA0Z"; // Ex: "AIzaSyD8_..."
+        var KEY_PART_2 = "Ve9mz_2tfhCXZrZSFQ"; // Ex: "...K9s8_z2"
         
         // O código junta as duas partes automaticamente:
         var GEMINI_API_KEY = KEY_PART_1 + KEY_PART_2; 
