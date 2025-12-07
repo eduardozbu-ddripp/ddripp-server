@@ -33,18 +33,16 @@
         body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; color: #343a40; }
         .card-shadow { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05); }
         
-        /* --- LAYOUT 3 COLUNAS (DO SEU ARQUIVO ORIGINAL) --- */
+        /* --- LAYOUT 3 COLUNAS --- */
         .itinerary-grid {
             display: grid;
-            /* Coluna 1 (Quando): 70px | Coluna 2 (Quem): 90px | Coluna 3 (O Quê): O resto */
             grid-template-columns: 70px 90px 1fr; 
             gap: 1rem;
             align-items: start;
-            padding: 1.25rem; /* p-5 do tailwind */
+            padding: 1.25rem;
             border-bottom: 1px solid #f3f4f6;
         }
         
-        /* Ajuste para Mobile */
         @media (max-width: 640px) {
             .itinerary-grid {
                 grid-template-columns: 50px 70px 1fr; 
@@ -58,7 +56,7 @@
         .pac-container { z-index: 1051 !important; }
         @media print { .no-print { display: none !important; } }
         
-        /* Estilos Voo (A Linha do Tempo Vertical - DO SEU ARQUIVO) */
+        /* Estilos Voo (Timeline Vertical) */
         details > summary { list-style: none; cursor: pointer; transition: background 0.2s; }
         details > summary::-webkit-details-marker { display: none; }
         details[open] > summary { background-color: #eff6ff; border-bottom: 1px solid #dbeafe; }
@@ -96,16 +94,16 @@
         <div id="initial-view" class="flex flex-col items-center justify-center min-h-[60vh]">
              <header class="text-center mb-8">
                 <h1 class="text-6xl font-bold text-gray-800 tracking-tighter">ddripp</h1>
-                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V5 (Logística Ativa)</p>
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • Fusion V6 (Final)</p>
             </header>
             
             <div class="bg-white p-8 rounded-2xl card-shadow w-full relative max-w-2xl">
-                <p class="text-gray-400 mb-4 text-base text-center">Fale ou escreva livremente os detalhes do plano de viagem do seu grupo.</p> 
+                <p class="text-gray-400 mb-4 text-base text-center">Fale, escreva ou anexe comprovantes (PDF/Imagens).</p> 
                 
                 <div class="relative">
-                    <textarea id="initial-input" rows="6" class="w-full p-4 pr-24 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition resize-none text-lg mt-2" placeholder="Ex: Voo Gol 1234 saindo de GRU dia 15/12 às 14h para Salvador. Ficar no Hotel Fasano..."></textarea>
+                    <textarea id="initial-input" rows="6" class="w-full p-4 pr-24 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition resize-none text-lg mt-2" placeholder="Clique no microfone ou anexe arquivos..."></textarea>
                     
-                    <!-- BOTÕES DE CLIP E MICROFONE RESTAURADOS -->
+                    <!-- BOTÕES DE CLIP E MICROFONE (RESTAURADOS) -->
                     <div class="absolute right-3 bottom-3 flex gap-2">
                         <button onclick="document.getElementById('file-upload').click()" class="p-2 text-gray-400 hover:text-blue-600 transition rounded-full hover:bg-gray-100" title="Anexar Arquivo">
                             <i class="fas fa-paperclip text-xl"></i>
@@ -200,9 +198,8 @@
     <script>
         // =================================================================
         // CONFIGURAÇÃO SEGURA DA CHAVE API (JÁ CONFIGURADA)
-        // Usando a chave que estava no seu arquivo "ddripp_voos_ok.txt"
-        var KEY_PART_1 = "AIzaSyBg0vmYZeSN32sK"; 
-        var KEY_PART_2 = "0KdXXi57unvZ6gdZIf8"; 
+        var KEY_PART_1 = "AIzaSyDpIh6fNWjKRmA0Z"; 
+        var KEY_PART_2 = "Ve9mz_2tfhCXZrZSFQ"; 
         var GEMINI_API_KEY = KEY_PART_1 + KEY_PART_2; 
         
         var SERVER_SHARE_URL = "https://ddripp-server.onrender.com/share"; 
@@ -216,9 +213,9 @@
         var autocomplete;
         var selectedFlightActivityIndex = -1; 
         var selectedTransportActivityIndex = -1;
-        var selectedFiles = []; // Restaurado: Array para guardar os arquivos
+        var selectedFiles = []; // Array para guardar os arquivos
 
-        // --- UPLOAD DE ARQUIVOS (RESTAURADO) ---
+        // --- UPLOAD E VISUALIZAÇÃO DE ARQUIVOS (RESTAURADO) ---
         function handleFileSelect(input) {
             var files = Array.from(input.files);
             if (!files.length) return;
@@ -291,7 +288,7 @@
         async function callGeminiSmart(promptText, responseSchema) {
             // Cria o payload base
             var payload = { 
-                contents: [{ parts: [] }], 
+                contents: [{ parts: [] }], // Começa vazio para adicionar texto e imagens
                 generationConfig: { responseMimeType: "application/json" } 
             };
 
@@ -422,7 +419,7 @@
             return false;
         }
 
-        // --- PROMPT MESTRE (CÉREBRO DO ARQUIVO .TXT) ---
+        // --- PROMPT MESTRE ---
         async function handleInitialInput() {
             var inputEl = document.getElementById('initial-input');
             var inputVal = inputEl.value;
