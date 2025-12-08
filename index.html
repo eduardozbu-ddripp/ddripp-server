@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ddripp - Digital Roadbook (V30 Final Fix)</title>
+    <title>ddripp - Digital Roadbook (V31 FT)</title>
     
     <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✈️</text></svg>">
@@ -88,9 +88,9 @@
           const vertexAI = getVertexAI(app, { location: "us-central1" });
           
           window.callVertexAI = async function(modelName, promptText, schema) {
-              // 1. Tenta Fine-Tuned
+              // 1. Tenta Fine-Tuned (AGORA NO PROJETO CORRETO)
               if (modelName && modelName.includes('projects/')) {
-                  window.logToScreen(`Tentando Fine-Tuned...`, 'info');
+                  window.logToScreen(`Tentando Fine-Tuned (ddripp-v2)...`, 'info');
                   try {
                       const tunedModel = getGenerativeModel(vertexAI, { 
                           model: modelName,
@@ -100,7 +100,7 @@
                       window.logToScreen("SUCESSO: Fine-Tuned respondeu!", 'success');
                       return JSON.parse(result.response.text());
                   } catch (error) {
-                      window.logToScreen(`Fine-Tuned indisponível (Tentando Next-Gen).`, 'warning');
+                      window.logToScreen(`Fine-Tuned indisponível (Tentando Next-Gen). Erro: ${error.message}`, 'warning');
                   }
               }
 
@@ -123,7 +123,7 @@
               }
               throw new Error("Todos os modelos falharam.");
           };
-          window.logToScreen("Sistema V30 (Final Fix) Pronto.", 'success');
+          window.logToScreen("Sistema V31 (Fine-Tuned) Pronto.", 'success');
       } catch (e) {
           window.logToScreen(`Erro Init: ${e.message}`, 'error');
       }
@@ -194,7 +194,7 @@
         <div id="initial-view" class="flex flex-col items-center justify-center min-h-[60vh]">
              <header class="text-center mb-8">
                 <h1 class="text-6xl font-bold text-gray-800 tracking-tighter">ddripp</h1>
-                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V30 (Final Fix)</p>
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V31 (FT)</p>
             </header>
             
             <div class="bg-white p-8 rounded-2xl card-shadow w-full relative max-w-2xl">
@@ -284,7 +284,7 @@
     <!-- CONSOLE DE DEBUG VISUAL -->
     <div id="debug-console-container" class="fixed bottom-0 left-0 w-full bg-gray-900 border-t-4 border-gray-800 z-50 h-32 no-print transition-all duration-300 translate-y-28 hover:translate-y-0 opacity-80 hover:opacity-100">
         <div class="flex justify-between items-center bg-gray-800 px-4 py-1 cursor-pointer" onclick="document.getElementById('debug-console-container').classList.toggle('translate-y-28')">
-            <span class="text-xs text-gray-400 font-bold uppercase">Status do Sistema (V30)</span>
+            <span class="text-xs text-gray-400 font-bold uppercase">Status do Sistema (V31)</span>
             <span class="text-gray-400 text-xs">▲ Logs</span>
         </div>
         <div id="debug-console" class="p-2 h-24 overflow-y-auto text-xs text-gray-300 font-mono">
@@ -309,7 +309,8 @@
         // =================================================================
         // CONFIGURAÇÃO
         // =================================================================
-        var TUNED_MODEL_NAME = "projects/6971887738/locations/us-central1/models/233104161669906432@1"; 
+        // ATUALIZADO: ID DO MODELO TREINADO NO PROJETO CORRETO
+        var TUNED_MODEL_NAME = "projects/246188888920/locations/us-central1/models/980279487348342784@1"; 
         var SERVER_SHARE_URL = "https://ddripp-server.onrender.com/share"; 
         
         var tripData = { origin: null, destination: null, startDate: null, returnDate: null, activities: [], title: '', tripObjective: '', weatherForecast: '', accommodation: null };
