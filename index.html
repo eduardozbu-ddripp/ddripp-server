@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ddripp - Digital Roadbook (V25 Updated)</title>
+    <title>ddripp - Digital Roadbook (V27 Smart Fix)</title>
     
     <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✈️</text></svg>">
@@ -53,17 +53,16 @@
       // DETETOR DE ERROS DE DOMÍNIO
       window.addEventListener('unhandledrejection', function(event) {
           if (event.reason && event.reason.message && (event.reason.message.includes("blocked") || event.reason.message.includes("PERMISSION_DENIED"))) {
-              const msg = event.reason.message;
-              const urlMatch = msg.match(/referer (https?:\/\/[^ ]+) /);
-              const blockedUrl = urlMatch ? urlMatch[1] : "este ambiente de preview";
-              
-              console.error("BLOQUEIO DETETADO:", blockedUrl);
-              window.logToScreen(`BLOQUEIO: O domínio ${blockedUrl} não está autorizado.`, 'error');
+              // Verifica se é erro de Vertex ou outro serviço crítico
+              console.error("BLOQUEIO DETETADO (CORS/API Key):", event.reason);
+              window.logToScreen(`BLOQUEIO DE SEGURANÇA: URL não autorizada.`, 'error');
               
               const alertBox = document.getElementById('cors-alert');
               const alertMsg = document.getElementById('cors-msg');
+              const currentUrl = window.location.href;
+              
               if(alertBox && alertMsg) {
-                  alertMsg.innerHTML = `<strong>Acesso Negado pela Google Cloud.</strong><br>O URL atual (<code>${blockedUrl}</code>) não está na lista de sites permitidos da sua API Key.<br><br>👉 <strong>Solução:</strong> Adicione este URL nas "Restrições de Aplicativo" da sua chave API no Google Cloud Console.`;
+                  alertMsg.innerHTML = `<strong>Ambiente de Teste Bloqueado.</strong><br>O Google Cloud bloqueou este URL de pré-visualização.<br><br>URL Atual: <code class="text-xs bg-red-100 p-1 rounded">${currentUrl}</code><br><br>👉 <strong>Solução Rápida:</strong> Teste no domínio oficial (GitHub Pages) ou adicione este URL às restrições da API Key.`;
                   alertBox.classList.remove('hidden');
               }
           }
@@ -71,7 +70,23 @@
 
       try {
           const app = initializeApp(firebaseConfig);
-          try { const analytics = getAnalytics(app); } catch(errAnalytics) { console.warn("Analytics skipping."); }
+          
+          // CORREÇÃO DO ERRO: Só inicia Analytics em Produção
+          // Isto evita o erro "Create Installation request failed" em ambientes de teste (scf.usercontent.goog)
+          const hostname = window.location.hostname;
+          const isProduction = hostname.includes('github.io') || hostname.includes('firebaseapp.com') || hostname.includes('ddripp');
+          
+          if (isProduction) {
+              try { 
+                  const analytics = getAnalytics(app); 
+                  console.log("Analytics iniciado.");
+              } catch(errAnalytics) { 
+                  console.warn("Analytics ignorado."); 
+              }
+          } else {
+              console.log("Analytics desativado em ambiente de preview para evitar erros 403.");
+              window.logToScreen("Modo Preview: Analytics desativado.", 'info');
+          }
 
           const vertexAI = getVertexAI(app, { location: "us-central1" });
           
@@ -89,21 +104,37 @@
                       window.logToScreen("SUCESSO: Fine-Tuned respondeu!", 'success');
                       return JSON.parse(result.response.text());
                   } catch (error) {
-                      window.logToScreen(`Fine-Tuned indisponível (Tentando fallback).`, 'warning');
+                      window.logToScreen(`Fine-Tuned indisponível (Tentando Next-Gen).`, 'warning');
                   }
               }
 
-              // 2. Fallback Atualizado (CORREÇÃO DE VERSÃO)
-              // Mudamos de "gemini-1.5-flash" (Retired) para "gemini-1.5-flash-002"
-              window.logToScreen("Usando Fallback (Gemini 1.5 Flash-002)...", 'info');
-              const standardModel = getGenerativeModel(vertexAI, { 
-                  model: "gemini-1.5-flash-002", // Versão atualizada e estável
-                  generationConfig: { responseMimeType: "application/json", responseSchema: schema }
-              });
-              const result = await standardModel.generateContent(promptText);
-              return JSON.parse(result.response.text());
+              // 2. Fallback para Modelos Next-Gen
+              // Atualizado para 2.0 Flash e 1.5 Flash-002 (Versões estáveis)
+              const nextGenModels = ["gemini-2.0-flash", "gemini-1.5-flash-002"];
+              
+              for (const modelVersion of nextGenModels) {
+                  window.logToScreen(`Tentando Motor: ${modelVersion}...`, 'info');
+                  try {
+                      const standardModel = getGenerativeModel(vertexAI, { 
+                          model: modelVersion, 
+                          generationConfig: { responseMimeType: "application/json", responseSchema: schema }
+                      });
+                      
+                      const result = await standardModel.generateContent(promptText);
+                      window.logToScreen(`SUCESSO: ${modelVersion} gerou o roteiro!`, 'success');
+                      return JSON.parse(result.response.text());
+                      
+                  } catch (err) {
+                      window.logToScreen(`Falha no ${modelVersion}: ${err.message}`, 'warning');
+                      // Se o erro for de permissão, lança para o detetor global pegar
+                      if(err.message.includes("403") || err.message.includes("blocked")) throw err;
+                  }
+              }
+              
+              throw new Error("Todos os modelos falharam. Verifique a consola.");
           };
-          window.logToScreen("Sistema V25 (Updated Models) Pronto.", 'success');
+          
+          window.logToScreen("Sistema V27 (Smart Preview Fix) Pronto.", 'success');
       } catch (e) {
           window.logToScreen(`Erro Init: ${e.message}`, 'error');
       }
@@ -175,7 +206,7 @@
         <div id="initial-view" class="flex flex-col items-center justify-center min-h-[60vh]">
              <header class="text-center mb-8">
                 <h1 class="text-6xl font-bold text-gray-800 tracking-tighter">ddripp</h1>
-                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V25 (Updated)</p>
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V27 (Smart Fix)</p>
             </header>
             
             <div class="bg-white p-8 rounded-2xl card-shadow w-full relative max-w-2xl">
@@ -265,7 +296,7 @@
     <!-- CONSOLE DE DEBUG VISUAL -->
     <div id="debug-console-container" class="fixed bottom-0 left-0 w-full bg-gray-900 border-t-4 border-gray-800 z-50 h-32 no-print transition-all duration-300 translate-y-28 hover:translate-y-0 opacity-80 hover:opacity-100">
         <div class="flex justify-between items-center bg-gray-800 px-4 py-1 cursor-pointer" onclick="document.getElementById('debug-console-container').classList.toggle('translate-y-28')">
-            <span class="text-xs text-gray-400 font-bold uppercase">Status do Sistema (V25)</span>
+            <span class="text-xs text-gray-400 font-bold uppercase">Status do Sistema (V27)</span>
             <span class="text-gray-400 text-xs">▲ Logs</span>
         </div>
         <div id="debug-console" class="p-2 h-24 overflow-y-auto text-xs text-gray-300 font-mono">
