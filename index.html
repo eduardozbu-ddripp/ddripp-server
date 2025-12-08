@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ddripp - Digital Roadbook (V17 Diagnostic)</title>
+    <title>ddripp - Digital Roadbook (V18 Debug)</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -31,13 +31,23 @@
         measurementId: "G-ENQ9Y0EKCB"
       };
 
+      // Logger Visual para ajudar no diagnóstico
+      window.logToScreen = function(msg, type = 'info') {
+          const consoleEl = document.getElementById('debug-console');
+          if(!consoleEl) return;
+          const color = type === 'error' ? 'text-red-400' : (type === 'success' ? 'text-green-400' : 'text-gray-300');
+          const time = new Date().toLocaleTimeString();
+          consoleEl.innerHTML += `<div class="${color} mb-1"><span class="text-xs text-gray-500">[${time}]</span> ${msg}</div>`;
+          consoleEl.scrollTop = consoleEl.scrollHeight;
+      };
+
       try {
           const app = initializeApp(firebaseConfig);
           const analytics = getAnalytics(app);
           const vertexAI = getVertexAI(app, { location: "us-central1" });
           
           window.callVertexAI = async function(modelName, promptText, schema) {
-              console.log("Tentando Vertex AI:", modelName);
+              window.logToScreen(`Tentando conectar ao modelo: ${modelName.split('/').pop()}`, 'info');
               try {
                   const model = getGenerativeModel(vertexAI, { 
                       model: modelName,
@@ -45,19 +55,20 @@
                   });
                   const result = await model.generateContent(promptText);
                   const response = result.response;
+                  window.logToScreen("Sucesso! Resposta recebida do Vertex AI.", 'success');
                   return JSON.parse(response.text());
               } catch (error) {
-                  // DETECÇÃO DE ERRO CORS/PERMISSÃO
-                  if (error.message && (error.message.includes("fetch") || error.message.includes("network"))) {
-                      console.error("ERRO DE CONEXÃO (Provável CORS):", error);
-                      showCORSAlert(); // Mostra ajuda visual ao usuário
+                  window.logToScreen(`ERRO VERTEX: ${error.message}`, 'error');
+                  
+                  if (error.message && (error.message.includes("fetch") || error.message.includes("network") || error.message.includes("CORS"))) {
+                      showCORSAlert();
                   }
                   throw error; 
               }
           };
-          console.log("V17 Ready.");
+          window.logToScreen("Sistema V18 iniciado.", 'success');
       } catch (e) {
-          console.warn("Erro Init:", e);
+          window.logToScreen(`Erro Fatal Init: ${e.message}`, 'error');
       }
     </script>
 
@@ -88,6 +99,11 @@
         @keyframes pulse-red { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.2); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
         .file-badge { display: inline-flex; align-items: center; background-color: #eff6ff; color: #1e40af; padding: 4px 10px; border-radius: 16px; font-size: 0.8rem; border: 1px solid #dbeafe; margin-right: 5px; margin-bottom: 5px;}
         gmp-place-autocomplete input { padding: 1rem !important; border-radius: 0.75rem !important; border: 1px solid #e5e7eb !important; width: 100%; font-size: 1.125rem !important; }
+        
+        /* Debug Console */
+        #debug-console { font-family: 'Courier New', monospace; }
+        #debug-console::-webkit-scrollbar { width: 8px; }
+        #debug-console::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -103,25 +119,24 @@
         <div class="flex items-start">
             <div class="py-1"><i class="fas fa-exclamation-triangle mr-3 text-yellow-600 text-xl"></i></div>
             <div>
-                <p class="font-bold">Acesso Bloqueado (CORS)</p>
-                <p class="text-sm mt-1">O Firebase bloqueou este site. Para corrigir:</p>
-                <ol class="list-decimal ml-4 text-sm mt-1 mb-2">
-                    <li>Vá ao Console Firebase > Authentication > Configurações > Domínios Autorizados.</li>
-                    <li>Adicione: <strong>eduardozbu-ddripp.github.io</strong></li>
-                </ol>
-                <button onclick="document.getElementById('cors-alert').classList.add('hidden')" class="text-xs bg-yellow-200 hover:bg-yellow-300 px-2 py-1 rounded">Entendi, vou configurar.</button>
+                <p class="font-bold">Acesso Bloqueado</p>
+                <p class="text-sm mt-1">Sua chave API ou Domínio estão bloqueados no Google Cloud.</p>
+                <ul class="list-disc ml-4 text-sm mt-1 mb-2">
+                    <li>Verifique se o domínio <strong>eduardozbu-ddripp.github.io</strong> está nas restrições da API Key no Google Cloud Console.</li>
+                </ul>
+                <button onclick="document.getElementById('cors-alert').classList.add('hidden')" class="text-xs bg-yellow-200 hover:bg-yellow-300 px-2 py-1 rounded">Entendi</button>
             </div>
         </div>
     </div>
 
     <!-- App Container -->
-    <div id="app-container" class="container mx-auto max-w-4xl p-4 pb-32 flex-grow">
+    <div id="app-container" class="container mx-auto max-w-4xl p-4 pb-48 flex-grow">
 
         <!-- Tela 1: Input -->
         <div id="initial-view" class="flex flex-col items-center justify-center min-h-[60vh]">
              <header class="text-center mb-8">
                 <h1 class="text-6xl font-bold text-gray-800 tracking-tighter">ddripp</h1>
-                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V17 (Tuned)</p>
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V18 (Debug)</p>
             </header>
             
             <div class="bg-white p-8 rounded-2xl card-shadow w-full relative max-w-2xl">
@@ -201,8 +216,19 @@
         </div>
     </div>
 
-    <!-- Rodapé -->
-    <div id="fixed-footer-input" class="hidden fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-md p-4 border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-40 no-print">
+    <!-- CONSOLE DE DEBUG VISUAL (Novo na V18) -->
+    <div id="debug-console-container" class="fixed bottom-0 left-0 w-full bg-gray-900 border-t-4 border-gray-800 z-50 h-32 no-print transition-all duration-300">
+        <div class="flex justify-between items-center bg-gray-800 px-4 py-1">
+            <span class="text-xs text-gray-400 font-bold uppercase">Consola de Diagnóstico (V18)</span>
+            <button onclick="document.getElementById('debug-console-container').classList.toggle('translate-y-28')" class="text-gray-400 hover:text-white"><i class="fas fa-chevron-down"></i></button>
+        </div>
+        <div id="debug-console" class="p-2 h-24 overflow-y-auto text-xs text-gray-300 font-mono">
+            <div>A aguardar comandos...</div>
+        </div>
+    </div>
+
+    <!-- Rodapé Input (Fica acima do console) -->
+    <div id="fixed-footer-input" class="hidden fixed bottom-32 left-0 w-full bg-white/90 backdrop-blur-md p-4 border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-40 no-print">
         <div class="container mx-auto max-w-2xl flex items-center gap-3">
             <div class="relative flex-grow">
                 <input type="text" id="adjustment-input" placeholder="Fale ou digite um ajuste..." class="w-full p-4 pr-12 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm outline-none transition">
@@ -216,17 +242,17 @@
     
     <script>
         // =================================================================
-        // CONFIGURAÇÃO - VERTEX AI TUNED MODEL
+        // CONFIGURAÇÃO
         // =================================================================
         var TUNED_MODEL_NAME = "projects/6971887738/locations/us-central1/models/233104161669906432@1"; 
         
-        // Chaves de Backup do usuário (Do arquivo original)
+        // Chaves de Backup do usuário
         var KEY_PART_1 = "AIzaSyD1fc4mUuaO841iQc"; 
         var KEY_PART_2 = "AAA2-Y2mGb-TDoKnc"; 
         var GEMINI_API_KEY = KEY_PART_1 + KEY_PART_2; 
         
         var SERVER_SHARE_URL = "https://ddripp-server.onrender.com/share"; 
-        var FALLBACK_MODELS = ["gemini-1.5-flash", "gemini-1.5-pro"]; // Atualizado para modelos estáveis
+        var FALLBACK_MODELS = ["gemini-1.5-flash", "gemini-1.5-pro"];
         
         var tripData = { origin: null, destination: null, startDate: null, returnDate: null, activities: [], title: '', tripObjective: '', weatherForecast: '', accommodation: null };
         var missingInfoQueue = [];
@@ -313,16 +339,15 @@
             // 1. TENTATIVA COM VERTEX AI (MODELO TREINADO)
             if (window.callVertexAI && TUNED_MODEL_NAME) {
                 try {
-                    console.log("Chamando Vertex AI Tuned...");
+                    window.logToScreen("Iniciando chamada Vertex AI...", 'info');
                     const result = await window.callVertexAI(TUNED_MODEL_NAME, promptText, responseSchema);
                     return result;
                 } catch (e) {
-                    console.warn("Vertex AI falhou (verificar CORS/Permissão). Tentando Fallback...", e);
-                    // Se foi CORS, a função interna já mostrou o alerta. Mas tentamos o fallback na mesma.
+                    window.logToScreen("Vertex AI Falhou. Tentando Fallback...", 'error');
                 }
             }
 
-            // 2. FALLBACK REST API (GOOGLE AI STUDIO KEY)
+            // 2. FALLBACK REST API
             var payload = { 
                 contents: [{ parts: [] }], 
                 generationConfig: { responseMimeType: "application/json" } 
@@ -341,18 +366,23 @@
                 var model = FALLBACK_MODELS[i];
                 var url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + GEMINI_API_KEY;
                 try {
-                    console.log("Tentando fallback REST:", model);
+                    window.logToScreen(`Tentando Fallback REST: ${model}`, 'info');
                     var response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    
                     if (response.ok) {
                         var result = await response.json();
                         var text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                        window.logToScreen("Sucesso via Fallback REST!", 'success');
                         return responseSchema ? JSON.parse(text) : text;
                     } else {
-                        console.warn("Fallback falhou:", response.status, response.statusText);
+                        window.logToScreen(`Erro Fallback [${model}]: Status ${response.status}`, 'error');
                     }
-                } catch (e) { console.warn("Erro no fetch fallback:", e); }
+                } catch (e) { 
+                    window.logToScreen(`Erro Fetch Fallback: ${e.message}`, 'error');
+                }
             }
-            throw new Error("Falha total na IA. Verifique as configurações de CORS no Firebase e a API Key de Backup.");
+            window.logToScreen("FALHA TOTAL: Nem Vertex nem Fallback funcionaram.", 'error');
+            throw new Error("Falha total na IA. Verifique Console de Debug abaixo.");
         }
 
         // --- LÓGICA LOGÍSTICA ---
