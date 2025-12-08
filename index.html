@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ddripp - Digital Roadbook</title>
+    <title>ddripp - Digital Roadbook (Vertex AI V16)</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -15,13 +15,15 @@
     <!-- Fontes -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 
-    <!-- FIREBASE INIT (Segurança) -->
+    <!-- FIREBASE & VERTEX AI INIT -->
     <script type="module">
-      import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-      import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-analytics.js";
+      // Usando versões compatíveis com Vertex AI Web SDK
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+      import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-analytics.js";
+      import { getVertexAI, getGenerativeModel } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-vertexai.js";
 
       const firebaseConfig = {
-        apiKey: "AIzaSyCVipGZZc7Pd2d2cjg_90RKXfzPC2vS4jk", // Chave Pública do Firebase (OK para Maps)
+        apiKey: "AIzaSyCVipGZZc7Pd2d2cjg_90RKXfzPC2vS4jk", 
         authDomain: "ddripp2.firebaseapp.com",
         projectId: "ddripp2",
         storageBucket: "ddripp2.firebasestorage.app",
@@ -33,76 +35,71 @@
       try {
           const app = initializeApp(firebaseConfig);
           const analytics = getAnalytics(app);
-          console.log("Firebase Security: Ativado (V15)");
+          
+          // Inicializa Vertex AI (Conectado ao modelo do Vertex Cloud)
+          // "us-central1" é a região onde o modelo foi treinado
+          const vertexAI = getVertexAI(app, { location: "us-central1" });
+          
+          // Expõe a função para o escopo global (para ser usada pelo script principal)
+          window.callVertexAI = async function(modelName, promptText, schema) {
+              console.log("Tentando conectar ao Vertex AI Tuned Model:", modelName);
+              try {
+                  const model = getGenerativeModel(vertexAI, { 
+                      model: modelName,
+                      generationConfig: {
+                          responseMimeType: "application/json",
+                          responseSchema: schema
+                      }
+                  });
+
+                  const result = await model.generateContent(promptText);
+                  const response = result.response;
+                  const text = response.text();
+                  console.log("Sucesso Vertex AI! Resposta recebida.");
+                  return JSON.parse(text);
+              } catch (error) {
+                  console.error("Erro no Vertex AI:", error);
+                  throw error; // Lança erro para ativar o fallback REST
+              }
+          };
+
+          console.log("Firebase & Vertex AI Security: Ativado (V16 - Tuned Ready)");
       } catch (e) {
-          console.warn("Erro ao iniciar Firebase:", e);
+          console.warn("Erro ao iniciar Firebase/Vertex:", e);
       }
     </script>
 
-    <!-- Google Maps Loader (Usando Chave do Firebase) -->
+    <!-- Google Maps Loader -->
     <script>
         (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
-            key: "AIzaSyCVipGZZc7Pd2d2cjg_90RKXfzPC2vS4jk", // Chave do Firebase
+            key: "AIzaSyCVipGZZc7Pd2d2cjg_90RKXfzPC2vS4jk",
             v: "weekly",
         });
     </script>
-
-    <script>
-        window.initMap = function() { console.log("Google Maps API loaded (V15)."); }
-    </script>
+    <script>window.initMap = function() { console.log("Google Maps API loaded."); }</script>
 
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; color: #343a40; }
         .card-shadow { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05); }
-        
-        /* GRID DE 3 COLUNAS */
-        .itinerary-grid {
-            display: grid;
-            grid-template-columns: 70px 90px 1fr; 
-            gap: 1rem;
-            align-items: start;
-            padding: 1.25rem;
-            border-bottom: 1px solid #f3f4f6;
-        }
-        
-        @media (max-width: 640px) {
-            .itinerary-grid { grid-template-columns: 50px 70px 1fr; gap: 0.5rem; padding: 1rem; font-size: 0.9rem; }
-        }
-
+        .itinerary-grid { display: grid; grid-template-columns: 70px 90px 1fr; gap: 1rem; align-items: start; padding: 1.25rem; border-bottom: 1px solid #f3f4f6; }
+        @media (max-width: 640px) { .itinerary-grid { grid-template-columns: 50px 70px 1fr; gap: 0.5rem; padding: 1rem; font-size: 0.9rem; } }
         .sticky-header { position: sticky; top: 0; z-index: 10; background-color: #f8f9fa; padding-top: 0.75rem; padding-bottom: 0.75rem; }
         .pac-container { z-index: 1051 !important; }
         @media print { .no-print { display: none !important; } }
-        
-        /* ESTILOS DE VOO (Timeline) */
         details > summary { list-style: none; cursor: pointer; transition: background 0.2s; }
         details > summary::-webkit-details-marker { display: none; }
         details[open] > summary { background-color: #eff6ff; border-bottom: 1px solid #dbeafe; }
-        
         .timeline-container { position: relative; padding-left: 20px; border-left: 2px solid #e2e8f0; margin-left: 10px; }
         .flight-event { position: relative; padding-bottom: 24px; padding-left: 16px; }
         .flight-event:last-child { padding-bottom: 0; }
         .flight-dot { position: absolute; left: -27px; top: 4px; width: 12px; height: 12px; background: white; border: 2px solid #94a3b8; border-radius: 50%; z-index: 10; }
         .flight-dot.active { background: #3b82f6; border-color: #3b82f6; }
-        
-        /* LINKS MAPA */
         a.map-link { color: #2563eb; text-decoration: none; }
         a.map-link:hover { text-decoration: underline; }
-        
-        /* VOZ */
         .listening-pulse { animation: pulse-red 1.5s infinite; color: #ef4444; }
         @keyframes pulse-red { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.2); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
-
-        /* ARQUIVOS */
         .file-badge { display: inline-flex; align-items: center; background-color: #eff6ff; color: #1e40af; padding: 4px 10px; border-radius: 16px; font-size: 0.8rem; border: 1px solid #dbeafe; margin-right: 5px; margin-bottom: 5px;}
-        
-        /* Novo Autocomplete */
-        gmp-place-autocomplete input {
-            padding: 1rem !important;
-            border-radius: 0.75rem !important;
-            border: 1px solid #e5e7eb !important;
-            width: 100%;
-            font-size: 1.125rem !important;
-        }
+        gmp-place-autocomplete input { padding: 1rem !important; border-radius: 0.75rem !important; border: 1px solid #e5e7eb !important; width: 100%; font-size: 1.125rem !important; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -120,7 +117,7 @@
         <div id="initial-view" class="flex flex-col items-center justify-center min-h-[60vh]">
              <header class="text-center mb-8">
                 <h1 class="text-6xl font-bold text-gray-800 tracking-tighter">ddripp</h1>
-                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V15 (Future Proof)</p>
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V16 (Vertex AI)</p>
             </header>
             
             <div class="bg-white p-8 rounded-2xl card-shadow w-full relative max-w-2xl">
@@ -140,10 +137,7 @@
                     </div>
                 </div>
 
-                <!-- Input Invisível de Arquivo -->
                 <input type="file" id="file-upload" class="hidden" accept=".pdf,image/*,application/pdf" multiple onchange="handleFileSelect(this)">
-                
-                <!-- Área de Preview de Arquivos -->
                 <div id="file-preview-container" class="hidden flex flex-wrap gap-2 mt-4 p-2 bg-gray-50 rounded-lg border border-gray-100"></div>
                 
                 <button id="btn-gerar" onclick="handleInitialInput()" class="mt-6 w-full bg-blue-600 text-white font-bold py-4 px-6 rounded-xl hover:bg-blue-700 transition-all transform active:scale-95 shadow-lg hover:shadow-xl uppercase tracking-wide">
@@ -152,17 +146,12 @@
             </div>
         </div>
 
-        <!-- Tela 2: Lacunas (COM NOVO AUTOCOMPLETE FIREBASE) -->
+        <!-- Tela 2: Lacunas -->
         <div id="gap-filling-view" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
             <div class="bg-white p-8 rounded-2xl card-shadow w-full max-w-md text-center relative">
                 <h3 id="gap-question" class="font-bold text-xl mb-6 text-gray-800"></h3>
-                
-                <!-- Container para o Novo Autocomplete do Maps -->
                 <div id="place-autocomplete-container" class="hidden mb-6 w-full"></div>
-                
-                <!-- Input Padrão (Texto/Data) -->
                 <input type="text" id="gap-input" class="w-full p-4 border border-gray-300 rounded-xl mb-6 text-lg focus:outline-none focus:border-blue-500 transition" placeholder="Sua resposta...">
-                
                 <button onclick="handleGapInput()" class="w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-xl hover:bg-blue-700 transition">Confirmar</button>
             </div>
         </div>
@@ -183,19 +172,16 @@
         <div id="itinerary-view" class="hidden bg-white p-4 rounded-2xl">
             <header id="trip-header" class="mb-8 bg-gray-50 p-6 rounded-2xl card-shadow border-l-4 border-blue-500">
                 <h2 id="trip-title" class="text-3xl font-bold text-gray-800 mb-2"></h2>
-                
                 <div class="flex flex-wrap items-center gap-3 text-gray-600 mb-3">
                     <a id="trip-destination-link" href="#" target="_blank" class="flex items-center bg-white px-3 py-1 rounded-full text-sm shadow-sm hover:text-blue-600 transition group cursor-pointer border border-gray-200">
                         <i class="fas fa-map-marker-alt mr-2 text-red-500"></i>
                         <span id="trip-destination" class="font-medium group-hover:underline"></span>
-                        <i class="fas fa-external-link-alt ml-2 text-xs text-gray-400"></i>
                     </a>
                     <div class="flex items-center bg-white px-3 py-1 rounded-full text-sm shadow-sm border border-gray-200">
                         <i class="fas fa-calendar-alt mr-2 text-blue-500"></i>
                         <span id="trip-date"></span>
                     </div>
                 </div>
-
                 <div id="weather-box" class="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-100 flex items-start hidden">
                     <i class="fas fa-cloud-sun mr-2 mt-1 text-blue-500 text-lg"></i>
                     <div>
@@ -204,9 +190,7 @@
                     </div>
                 </div>
             </header>
-
             <div id="itinerary-content" class="space-y-8"></div>
-            
             <div id="trip-footer" class="mt-12 flex justify-center space-x-4 pb-8 no-print">
                 <button onclick="shareTrip()" class="flex items-center bg-green-500 text-white font-bold py-3 px-6 rounded-full hover:bg-green-600 transition shadow-md hover:shadow-lg transform hover:-translate-y-1"><i class="fab fa-whatsapp mr-2 text-xl"></i> Partilhar</button>
                 <button onclick="downloadPDF()" class="flex items-center bg-red-500 text-white font-bold py-3 px-6 rounded-full hover:bg-red-600 transition shadow-md hover:shadow-lg transform hover:-translate-y-1"><i class="fas fa-file-pdf mr-2 text-xl"></i> Baixar PDF</button>
@@ -229,18 +213,19 @@
     
     <script>
         // =================================================================
-        // CONFIGURAÇÃO - PREENCHA COM SUA CHAVE GEMINI NOVA
-        // Chave do AI Studio: https://aistudio.google.com/app/apikey
+        // CONFIGURAÇÃO - VERTEX AI TUNED MODEL
         // =================================================================
-        var KEY_PART_1 = "AIzaSyD1fc4mUuaO841iQc"; // Ex: "AIzaSy..."
-        var KEY_PART_2 = "AAA2-Y2mGb-TDoKnc"; // Ex: "...89zT..."
+        
+        // ID DO MODELO TREINADO NO VERTEX AI
+        var TUNED_MODEL_NAME = "projects/6971887738/locations/us-central1/models/233104161669906432@1"; 
+        
+        // Chaves de Backup (Fallback para REST API se Vertex falhar)
+        var KEY_PART_1 = "AIzaSyD1fc4mUuaO841iQc"; 
+        var KEY_PART_2 = "AAA2-Y2mGb-TDoKnc"; 
         var GEMINI_API_KEY = KEY_PART_1 + KEY_PART_2; 
         
         var SERVER_SHARE_URL = "https://ddripp-server.onrender.com/share"; 
-        // =================================================================
-
-        // LISTA DE MODELOS COM FALLBACK DE SEGURANÇA (Conforme sua solicitação)
-        var MODELS_TO_TRY = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+        var FALLBACK_MODELS = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-2.0-flash-exp"];
         
         var tripData = { origin: null, destination: null, startDate: null, returnDate: null, activities: [], title: '', tripObjective: '', weatherForecast: '', accommodation: null };
         var missingInfoQueue = [];
@@ -317,8 +302,23 @@
         function showLoader(msg) { document.getElementById('loading-message').textContent = msg; document.getElementById('loading-spinner').classList.remove('hidden'); }
         function hideLoader() { document.getElementById('loading-spinner').classList.add('hidden'); }
 
-        // --- LLM CALL ---
+        // --- FUNÇÃO INTELIGENTE: Tenta Vertex primeiro, depois REST Fallback ---
         async function callGeminiSmart(promptText, responseSchema) {
+            
+            // 1. TENTATIVA COM VERTEX AI (MODELO TREINADO)
+            if (window.callVertexAI && TUNED_MODEL_NAME) {
+                try {
+                    console.log("Iniciando chamada ao Vertex AI Tuned...");
+                    const result = await window.callVertexAI(TUNED_MODEL_NAME, promptText, responseSchema);
+                    return result;
+                } catch (e) {
+                    console.warn("Falha no Vertex AI Tuned, tentando fallback REST API...", e);
+                }
+            } else {
+                console.log("Vertex AI não configurado ou ID não inserido. Usando Fallback direto.");
+            }
+
+            // 2. FALLBACK REST API (GOOGLE AI STUDIO KEY)
             var payload = { 
                 contents: [{ parts: [] }], 
                 generationConfig: { responseMimeType: "application/json" } 
@@ -333,26 +333,23 @@
 
             if (responseSchema) payload.generationConfig.responseSchema = responseSchema;
 
-            for (var i = 0; i < MODELS_TO_TRY.length; i++) {
-                var model = MODELS_TO_TRY[i];
+            for (var i = 0; i < FALLBACK_MODELS.length; i++) {
+                var model = FALLBACK_MODELS[i];
                 var url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + GEMINI_API_KEY;
                 try {
-                    console.log("Tentando modelo:", model);
+                    console.log("Tentando fallback REST:", model);
                     var response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                     if (response.ok) {
-                        console.log(`Sucesso! Conectado ao ${model}`);
                         var result = await response.json();
                         var text = result.candidates?.[0]?.content?.parts?.[0]?.text;
                         return responseSchema ? JSON.parse(text) : text;
-                    } else {
-                        console.warn(`Falha no modelo ${model}:`, response.status);
                     }
                 } catch (e) { console.warn(e); }
             }
-            throw new Error("Não foi possível conectar à IA. Verifique sua chave API do Google AI Studio.");
+            throw new Error("Não foi possível conectar à IA (Nem Vertex, nem Fallback).");
         }
 
-        // --- CÁLCULO DE HORAS ---
+        // --- LÓGICA LOGÍSTICA (Inalterada) ---
         function subtractTime(timeStr, minutesToSubtract) {
             if(!timeStr) return "";
             var parts = timeStr.split(':');
@@ -370,7 +367,6 @@
             return d.getHours().toString().padStart(2, '0') + ":" + d.getMinutes().toString().padStart(2, '0');
         }
 
-        // --- POPUPS DE VOO ---
         function checkFlightClarification() {
             var flightIndex = tripData.activities.findIndex(function(a) {
                 var isVague = a.type === 'travel' && (!a.flightNumber || !a.airline) && a.description.toLowerCase().includes("voo");
@@ -453,14 +449,12 @@
             return false;
         }
 
-        // --- PROMPT MESTRE ---
         async function handleInitialInput() {
             var inputEl = document.getElementById('initial-input');
             var inputVal = inputEl.value;
-            // Validação mais branda: permite se tiver arquivo, mesmo sem texto
             if ((!inputVal || inputVal.trim() === "") && selectedFiles.length === 0) return alert('Por favor, diga algo ou anexe um arquivo.');
             
-            showLoader('A planear logística...');
+            showLoader('Conectando ao Cérebro ddripp (Vertex AI)...');
             var today = new Date().toLocaleDateString('pt-BR');
             
             var schemaStructure = {
@@ -510,13 +504,12 @@
                 "Você é o 'ddripp', um planejador logístico expert.\n\n" +
                 "[DATA ATUAL]: " + today + "\n" +
                 "[REGRAS CRÍTICAS]\n" +
-                "1. Extração Compulsória: Extraia CADA evento e informação de viagem presente no texto ou ARQUIVOS ANEXOS.\n" +
-                "2. Datas: Converta TODAS as referências relativas (ex: 'próxima terça') para o formato de data YYYY-MM-DD.\n" +
-                "3. Localização: 'location' deve ter APENAS o nome de um lugar pesquisável.\n" +
-                "4. Voo: Voo = atividade 'travel'. Se faltar voo/cia, PREENCHA 'flightOptions' com 3 opções prováveis. Se tiver tudo, preencha flightNumber.\n" +
+                "1. Extração Compulsória: Extraia CADA evento do texto ou ARQUIVOS ANEXOS.\n" +
+                "2. Datas: YYYY-MM-DD.\n" +
+                "3. Localização: 'location' apenas nome pesquisável.\n" +
+                "4. Voo: Se faltar voo/cia, PREENCHA 'flightOptions'. Se tiver, preencha flightNumber.\n" +
                 "5. Deslocamento: Se não houver info, use 'ASK_USER'.\n" +
-                "6. NUNCA faça perguntas no output. Use 'missingCriticalInfo'.\n" +
-                "7. MICRO-DESLOCAMENTO: A LÓGICA DE TRANSFER É FEITA PELO CÓDIGO (fillGeographicGaps). A IA SÓ DEVE EXTRAIR EVENTOS PRINCIPAIS.\n\n" +
+                "6. NUNCA faça perguntas no output. Use 'missingCriticalInfo'.\n\n" +
                 "[JSON SCHEMA DE SAÍDA]\n" +
                 JSON.stringify(schemaStructure, null, 2) + "\n\n" +
                 "[INPUT]\n" +
@@ -536,10 +529,10 @@
                         tripData = { ...tripData, ...result };
                     }
                     if(!tripData.activities) tripData.activities = [];
-                    selectedFiles = []; // Limpa arquivos após envio
+                    selectedFiles = []; 
                     renderFilePreviews();
                     
-                    fillGeographicGaps(); // A CADEIA LOGÍSTICA ESTÁ AQUI
+                    fillGeographicGaps(); 
 
                     if (checkFlightClarification()) return; 
                     if (checkTransportClarification()) return;
@@ -555,25 +548,18 @@
             }
         }
 
-        // --- CÉREBRO DA CADEIA LOGÍSTICA ---
         function fillGeographicGaps() {
             tripData.activities.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
             var newActivities = [];
             var lastKnownLocation = tripData.accommodation || tripData.origin || null;
-            var isFirstTransfer = true; 
 
             for (var i = 0; i < tripData.activities.length; i++) {
                 var curr = tripData.activities[i];
-                
-                // 1. CADEIA AÉREA: VOO -> TRANSFER
                 if (curr.type === 'travel' && curr.destinationAirport && curr.flightNumber) {
                     newActivities.push(curr); 
-                    
                     var arrivalTime = addTime(curr.time, curr.flightDurationMinutes || 120);
                     var transferStart = addTime(arrivalTime, 30); 
-                    
                     var nextLocation = tripData.accommodation || null;
-                    
                     if (i < tripData.activities.length - 1) {
                         var next = tripData.activities[i+1];
                         if(next.location && !next.location.toLowerCase().includes("aeroporto")) {
@@ -582,7 +568,6 @@
                     } else if (!tripData.accommodation) {
                         nextLocation = tripData.destination || null;
                     }
-                    
                     var transferDest = nextLocation || "Acomodação/Ponto de Encontro";
                     if (tripData.returnDate && curr.date === tripData.returnDate && curr.destinationAirport.includes(tripData.origin)) {
                         transferDest = "Casa / Origem";
@@ -602,14 +587,10 @@
                     } else {
                         lastKnownLocation = curr.destinationAirport;
                     }
-                    isFirstTransfer = false;
                     continue;
                 }
-
-                // 2. CADEIA TERRESTRE
                 if (curr.location) {
                     var cleanedLast = lastKnownLocation ? lastKnownLocation.split(' para ')[lastKnownLocation.split(' para ').length - 1] : null;
-                    
                     if (cleanedLast && curr.location !== cleanedLast && !curr.description.includes(cleanedLast)) {
                         var travelTime = subtractTime(curr.time, 45); 
                         newActivities.push({
@@ -637,39 +618,32 @@
             else generateItinerary();
         }
 
-        // --- NOVO: ASK NEXT COM AUTOCOMPLETE DO GOOGLE MAPS ---
         function askNext() {
             var q = missingInfoQueue[0];
             document.getElementById('gap-question').textContent = q.q;
             var input = document.getElementById('gap-input');
             input.value = '';
             
-            // Se for LOCALIZAÇÃO, usamos o novo PlaceAutocompleteElement
             if (q.type === 'location') {
                 document.getElementById('gap-input').classList.add('hidden');
                 var container = document.getElementById('place-autocomplete-container');
-                container.innerHTML = ''; // Limpa anterior
+                container.innerHTML = ''; 
                 container.classList.remove('hidden');
 
-                // Importa a biblioteca e cria o elemento
                 google.maps.importLibrary("places").then(({ PlaceAutocompleteElement }) => {
                     const autocomplete = new PlaceAutocompleteElement();
                     autocomplete.placeholder = "Digite a cidade ou local...";
                     container.appendChild(autocomplete);
-
                     autocomplete.addEventListener("gmp-places-select", async ({ place }) => {
                         await place.fetchFields({ fields: ["displayName", "formattedAddress"] });
                         const val = place.formattedAddress || place.displayName;
-                        // Joga o valor no input escondido para a função handleGapInput pegar
                         input.value = val;
                     });
                 }).catch(e => {
-                    console.warn("Erro ao carregar Novo Places API:", e);
-                    // Fallback se der erro no import
+                    console.warn("Erro Places API:", e);
                     document.getElementById('gap-input').classList.remove('hidden');
                     document.getElementById('place-autocomplete-container').classList.add('hidden');
                 });
-
             } else if (q.type === 'date') {
                 input.type = 'date';
                 document.getElementById('gap-input').classList.remove('hidden');
@@ -679,7 +653,6 @@
                 document.getElementById('gap-input').classList.remove('hidden');
                 document.getElementById('place-autocomplete-container').classList.add('hidden');
             }
-            
             document.getElementById('gap-filling-view').classList.remove('hidden');
             document.getElementById('initial-view').classList.add('hidden');
             if(q.type !== 'location') input.focus();
@@ -688,7 +661,6 @@
         function handleGapInput() {
             var val = document.getElementById('gap-input').value;
             if (!val) return alert('Por favor, responda ou selecione um local.');
-            
             if (missingInfoQueue[0].key.startsWith('transport_fix_')) {
                 var idx = parseInt(missingInfoQueue[0].key.split('_')[2]);
                 tripData.activities[idx].transport = val;
@@ -724,18 +696,15 @@
             } else {
                 weatherBox.classList.add('hidden');
             }
-            
             if (SERVER_SHARE_URL && SERVER_SHARE_URL.includes("http")) {
                 var dest = tripData.destination || "Viagem";
                 var sDate = tripData.startDate || "";
                 var pingUrl = `${SERVER_SHARE_URL}?title=Ping&dest=${encodeURIComponent(dest)}&date=${encodeURIComponent(sDate)}&warmup=true`;
                 fetch(pingUrl, { mode: 'no-cors' }).catch(e => console.log("Servidor acordado!"));
             }
-
             renderItinerary();
         }
 
-        // --- RESTAURAÇÃO: Visual de 3 Colunas + Dropdown + Timeline ---
         function renderItinerary() {
             var container = document.getElementById('itinerary-content');
             container.innerHTML = '';
@@ -840,7 +809,7 @@
             var input = document.getElementById('adjustment-input');
             var text = input.value;
             if (!text.trim()) return;
-            showLoader('Ajustando...');
+            showLoader('Ajustando com IA...');
             var prompt = "Roteiro ATUAL: " + JSON.stringify(tripData.activities) + ". AJUSTE: \"" + text + "\". Mantenha JSON.";
             try {
                 var result = await callGeminiSmart(prompt, null);
