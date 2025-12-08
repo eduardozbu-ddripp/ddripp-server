@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ddripp - Digital Roadbook (V28 Repair)</title>
+    <title>ddripp - Digital Roadbook (V29 Stable)</title>
     
     <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✈️</text></svg>">
@@ -123,7 +123,7 @@
               }
               throw new Error("Todos os modelos falharam.");
           };
-          window.logToScreen("Sistema V28 (Repair) Pronto.", 'success');
+          window.logToScreen("Sistema V29 (Stable Repair) Pronto.", 'success');
       } catch (e) {
           window.logToScreen(`Erro Init: ${e.message}`, 'error');
       }
@@ -193,7 +193,7 @@
         <div id="initial-view" class="flex flex-col items-center justify-center min-h-[60vh]">
              <header class="text-center mb-8">
                 <h1 class="text-6xl font-bold text-gray-800 tracking-tighter">ddripp</h1>
-                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V28 (Repair)</p>
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V29 (Stable)</p>
             </header>
             
             <div class="bg-white p-8 rounded-2xl card-shadow w-full relative max-w-2xl">
@@ -283,7 +283,7 @@
     <!-- CONSOLE DE DEBUG VISUAL -->
     <div id="debug-console-container" class="fixed bottom-0 left-0 w-full bg-gray-900 border-t-4 border-gray-800 z-50 h-32 no-print transition-all duration-300 translate-y-28 hover:translate-y-0 opacity-80 hover:opacity-100">
         <div class="flex justify-between items-center bg-gray-800 px-4 py-1 cursor-pointer" onclick="document.getElementById('debug-console-container').classList.toggle('translate-y-28')">
-            <span class="text-xs text-gray-400 font-bold uppercase">Status do Sistema (V28)</span>
+            <span class="text-xs text-gray-400 font-bold uppercase">Status do Sistema (V29)</span>
             <span class="text-gray-400 text-xs">▲ Logs</span>
         </div>
         <div id="debug-console" class="p-2 h-24 overflow-y-auto text-xs text-gray-300 font-mono">
@@ -400,14 +400,11 @@
             }
         }
 
-        // --- FUNCIONALIDADES NOVAS (MERGED) ---
-        
-        // 1. HEADER IMAGE DINÂMICA
+        // --- FUNCIONALIDADES EXTRAS (Restauradas) ---
         function loadHeaderImage() {
             if (!SERVER_SHARE_URL) return;
-            // Usa endpoint /dynamic-cover
             var dynamicImgUrl = SERVER_SHARE_URL.replace('/share', '/dynamic-cover') + `?dest=${encodeURIComponent(tripData.destination)}&date=${encodeURIComponent(tripData.startDate||'')}`;
-            destinationImageUrl = dynamicImgUrl; // Salva para o share
+            destinationImageUrl = dynamicImgUrl; 
             
             var img = new Image();
             img.onload = function() {
@@ -424,10 +421,8 @@
             img.src = dynamicImgUrl;
         }
 
-        // 2. CLIMA REAL-TIME (Open-Meteo + Google Geocoding)
         async function fetchWeather(destination) {
             try {
-                // Carrega Geocoding dinamicamente (padrão moderno)
                 const { Geocoder } = await google.maps.importLibrary("geocoding");
                 const geocoder = new Geocoder();
                 
@@ -567,7 +562,8 @@
             return false;
         }
 
-        async function handleInitialInput() {
+        // FUNÇÃO PRINCIPAL (CORRIGIDA E EXPOSTA)
+        window.handleInitialInput = async function() {
             var inputEl = document.getElementById('initial-input');
             var inputVal = inputEl.value;
             if ((!inputVal || inputVal.trim() === "") && selectedFiles.length === 0) return alert('Por favor, diga algo ou anexe um arquivo.');
@@ -664,7 +660,7 @@
                 hideLoader();
                 alert("Erro ao processar: " + e.message);
             }
-        }
+        };
 
         function fillGeographicGaps() {
             tripData.activities.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
@@ -941,3 +937,52 @@
                 alert("Erro: " + e.message);
             }
         }
+
+        // --- COMPARTILHAMENTO ATUALIZADO ---
+        function shareTrip() {
+            var jsonStr = encodeURIComponent(JSON.stringify(tripData)); 
+            var base64Data = btoa(jsonStr);
+            
+            var finalShareUrl = `${SERVER_SHARE_URL}?title=${encodeURIComponent(tripData.tripObjective)}&dest=${encodeURIComponent(tripData.destination)}&date=${encodeURIComponent(tripData.startDate)}&img=${encodeURIComponent(destinationImageUrl)}&data=${base64Data}`;
+            
+            var text = `*${tripData.tripObjective || "Minha Viagem"}* ✈️\n\n🗓️ ${tripData.startDate} a ${tripData.returnDate}\n📍 ${tripData.destination}\n\n👇 *Toque no cartão abaixo para ver o roteiro completo:*\n${finalShareUrl}`;
+            
+            window.open("https://api.whatsapp.com/send?text=" + encodeURIComponent(text)); 
+        }
+
+        function downloadPDF() {
+            var { jsPDF } = window.jspdf;
+            var element = document.getElementById('itinerary-view');
+            var buttons = document.getElementById('trip-footer');
+            if(buttons) buttons.classList.add('hidden');
+
+            html2canvas(element, { scale: 2 }).then(function(canvas) {
+                var imgData = canvas.toDataURL('image/png');
+                var pdf = new jsPDF('p', 'mm', 'a4');
+                var pdfWidth = pdf.internal.pageSize.getWidth();
+                var pdfHeight = pdf.internal.pageSize.getHeight();
+                var margin = 10;
+                var contentWidth = pdfWidth - (margin * 2);
+                var contentHeight = (canvas.height * contentWidth) / canvas.width;
+                var position = 0; 
+                var heightLeft = contentHeight; 
+                var pageHeightMM = pdfHeight - (margin * 2);
+                pdf.addImage(imgData, 'PNG', margin, margin + position, contentWidth, contentHeight);
+                    heightLeft -= pageHeightMM;
+                while (heightLeft > 0) {
+                    position = heightLeft - contentHeight; 
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'PNG', margin, margin + position, contentWidth, contentHeight);
+                    heightLeft -= pageHeightMM;
+                }
+                pdf.save("roteiro.pdf");
+                if(buttons) buttons.classList.remove('hidden');
+            }).catch(function(err) {
+                 console.error(err);
+                 alert("Erro ao gerar PDF.");
+                 if(buttons) buttons.classList.remove('hidden');
+            });
+        }
+    </script>
+</body>
+</html>
