@@ -33,7 +33,7 @@
       try {
           const app = initializeApp(firebaseConfig);
           const analytics = getAnalytics(app);
-          console.log("Firebase Security: Ativado (V14)");
+          console.log("Firebase Security: Ativado (V15)");
       } catch (e) {
           console.warn("Erro ao iniciar Firebase:", e);
       }
@@ -48,7 +48,7 @@
     </script>
 
     <script>
-        window.initMap = function() { console.log("Google Maps API loaded (V14)."); }
+        window.initMap = function() { console.log("Google Maps API loaded (V15)."); }
     </script>
 
     <style>
@@ -120,7 +120,7 @@
         <div id="initial-view" class="flex flex-col items-center justify-center min-h-[60vh]">
              <header class="text-center mb-8">
                 <h1 class="text-6xl font-bold text-gray-800 tracking-tighter">ddripp</h1>
-                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V14 (Final Fix)</p>
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V15 (Future Proof)</p>
             </header>
             
             <div class="bg-white p-8 rounded-2xl card-shadow w-full relative max-w-2xl">
@@ -232,14 +232,16 @@
         // CONFIGURAÇÃO - PREENCHA COM SUA CHAVE GEMINI NOVA
         // Chave do AI Studio: https://aistudio.google.com/app/apikey
         // =================================================================
-        var KEY_PART_1 = "AIzaSyD1fc4mUuaO841"; // Ex: "AIzaSy..."
-        var KEY_PART_2 = "iQcAAA2-Y2mGb-TDoKnc"; // Ex: "...89zT..."
+        var KEY_PART_1 = "AIzaSyD1fc4mUuaO841iQc"; // Ex: "AIzaSy..."
+        var KEY_PART_2 = "AAA2-Y2mGb-TDoKnc"; // Ex: "...89zT..."
         var GEMINI_API_KEY = KEY_PART_1 + KEY_PART_2; 
         
         var SERVER_SHARE_URL = "https://ddripp-server.onrender.com/share"; 
         // =================================================================
 
-        var MODELS_TO_TRY = ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]; 
+        // LISTA DE MODELOS COM FALLBACK DE SEGURANÇA (Conforme sua solicitação)
+        var MODELS_TO_TRY = ["gemini-2.5-Pro", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+        
         var tripData = { origin: null, destination: null, startDate: null, returnDate: null, activities: [], title: '', tripObjective: '', weatherForecast: '', accommodation: null };
         var missingInfoQueue = [];
         var selectedFlightActivityIndex = -1; 
@@ -338,6 +340,7 @@
                     console.log("Tentando modelo:", model);
                     var response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                     if (response.ok) {
+                        console.log(`Sucesso! Conectado ao ${model}`);
                         var result = await response.json();
                         var text = result.candidates?.[0]?.content?.parts?.[0]?.text;
                         return responseSchema ? JSON.parse(text) : text;
