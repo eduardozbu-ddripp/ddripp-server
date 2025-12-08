@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ddripp - Digital Roadbook (V18 Debug)</title>
+    <title>ddripp - Digital Roadbook</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -15,11 +15,10 @@
     <!-- Fontes -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 
-    <!-- FIREBASE & VERTEX AI INIT -->
+    <!-- FIREBASE INIT (Mantido conforme seu arquivo) -->
     <script type="module">
-      import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-      import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-analytics.js";
-      import { getVertexAI, getGenerativeModel } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-vertexai.js";
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+      import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-analytics.js";
 
       const firebaseConfig = {
         apiKey: "AIzaSyCVipGZZc7Pd2d2cjg_90RKXfzPC2vS4jk", 
@@ -31,79 +30,69 @@
         measurementId: "G-ENQ9Y0EKCB"
       };
 
-      // Logger Visual para ajudar no diagnóstico
-      window.logToScreen = function(msg, type = 'info') {
-          const consoleEl = document.getElementById('debug-console');
-          if(!consoleEl) return;
-          const color = type === 'error' ? 'text-red-400' : (type === 'success' ? 'text-green-400' : 'text-gray-300');
-          const time = new Date().toLocaleTimeString();
-          consoleEl.innerHTML += `<div class="${color} mb-1"><span class="text-xs text-gray-500">[${time}]</span> ${msg}</div>`;
-          consoleEl.scrollTop = consoleEl.scrollHeight;
-      };
-
       try {
           const app = initializeApp(firebaseConfig);
           const analytics = getAnalytics(app);
-          const vertexAI = getVertexAI(app, { location: "us-central1" });
-          
-          window.callVertexAI = async function(modelName, promptText, schema) {
-              window.logToScreen(`Tentando conectar ao modelo: ${modelName.split('/').pop()}`, 'info');
-              try {
-                  const model = getGenerativeModel(vertexAI, { 
-                      model: modelName,
-                      generationConfig: { responseMimeType: "application/json", responseSchema: schema }
-                  });
-                  const result = await model.generateContent(promptText);
-                  const response = result.response;
-                  window.logToScreen("Sucesso! Resposta recebida do Vertex AI.", 'success');
-                  return JSON.parse(response.text());
-              } catch (error) {
-                  window.logToScreen(`ERRO VERTEX: ${error.message}`, 'error');
-                  
-                  if (error.message && (error.message.includes("fetch") || error.message.includes("network") || error.message.includes("CORS"))) {
-                      showCORSAlert();
-                  }
-                  throw error; 
-              }
-          };
-          window.logToScreen("Sistema V18 iniciado.", 'success');
+          console.log("Firebase Security: Ativado");
       } catch (e) {
-          window.logToScreen(`Erro Fatal Init: ${e.message}`, 'error');
+          console.warn("Erro ao iniciar Firebase:", e);
       }
     </script>
 
-    <!-- Google Maps -->
+    <!-- Google Maps Loader -->
     <script>
         (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
-            key: "AIzaSyCVipGZZc7Pd2d2cjg_90RKXfzPC2vS4jk", v: "weekly",
+            key: "AIzaSyCVipGZZc7Pd2d2cjg_90RKXfzPC2vS4jk", // Chave do Firebase (Maps)
+            v: "weekly",
         });
     </script>
 
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; color: #343a40; }
         .card-shadow { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05); }
-        .itinerary-grid { display: grid; grid-template-columns: 70px 90px 1fr; gap: 1rem; align-items: start; padding: 1.25rem; border-bottom: 1px solid #f3f4f6; }
-        @media (max-width: 640px) { .itinerary-grid { grid-template-columns: 50px 70px 1fr; gap: 0.5rem; padding: 1rem; font-size: 0.9rem; } }
+        
+        .itinerary-grid {
+            display: grid;
+            grid-template-columns: 70px 90px 1fr; 
+            gap: 1rem;
+            align-items: start;
+            padding: 1.25rem;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        @media (max-width: 640px) {
+            .itinerary-grid { grid-template-columns: 50px 70px 1fr; gap: 0.5rem; padding: 1rem; font-size: 0.9rem; }
+        }
+
         .sticky-header { position: sticky; top: 0; z-index: 10; background-color: #f8f9fa; padding-top: 0.75rem; padding-bottom: 0.75rem; }
+        .pac-container { z-index: 1051 !important; }
+        @media print { .no-print { display: none !important; } }
+        
         details > summary { list-style: none; cursor: pointer; transition: background 0.2s; }
         details > summary::-webkit-details-marker { display: none; }
         details[open] > summary { background-color: #eff6ff; border-bottom: 1px solid #dbeafe; }
+        
         .timeline-container { position: relative; padding-left: 20px; border-left: 2px solid #e2e8f0; margin-left: 10px; }
         .flight-event { position: relative; padding-bottom: 24px; padding-left: 16px; }
         .flight-event:last-child { padding-bottom: 0; }
         .flight-dot { position: absolute; left: -27px; top: 4px; width: 12px; height: 12px; background: white; border: 2px solid #94a3b8; border-radius: 50%; z-index: 10; }
         .flight-dot.active { background: #3b82f6; border-color: #3b82f6; }
+        
         a.map-link { color: #2563eb; text-decoration: none; }
         a.map-link:hover { text-decoration: underline; }
+        
         .listening-pulse { animation: pulse-red 1.5s infinite; color: #ef4444; }
         @keyframes pulse-red { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.2); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
+
         .file-badge { display: inline-flex; align-items: center; background-color: #eff6ff; color: #1e40af; padding: 4px 10px; border-radius: 16px; font-size: 0.8rem; border: 1px solid #dbeafe; margin-right: 5px; margin-bottom: 5px;}
-        gmp-place-autocomplete input { padding: 1rem !important; border-radius: 0.75rem !important; border: 1px solid #e5e7eb !important; width: 100%; font-size: 1.125rem !important; }
         
-        /* Debug Console */
-        #debug-console { font-family: 'Courier New', monospace; }
-        #debug-console::-webkit-scrollbar { width: 8px; }
-        #debug-console::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        gmp-place-autocomplete input {
+            padding: 1rem !important;
+            border-radius: 0.75rem !important;
+            border: 1px solid #e5e7eb !important;
+            width: 100%;
+            font-size: 1.125rem !important;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -114,29 +103,14 @@
         <p id="loading-message" class="text-white mt-4 text-lg font-medium animate-pulse">A processar logística...</p>
     </div>
 
-    <!-- ALERTA DE CORS (Diagnóstico) -->
-    <div id="cors-alert" class="hidden fixed top-4 left-1/2 transform -translate-x-1/2 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded shadow-lg z-[200] max-w-lg w-full">
-        <div class="flex items-start">
-            <div class="py-1"><i class="fas fa-exclamation-triangle mr-3 text-yellow-600 text-xl"></i></div>
-            <div>
-                <p class="font-bold">Acesso Bloqueado</p>
-                <p class="text-sm mt-1">Sua chave API ou Domínio estão bloqueados no Google Cloud.</p>
-                <ul class="list-disc ml-4 text-sm mt-1 mb-2">
-                    <li>Verifique se o domínio <strong>eduardozbu-ddripp.github.io</strong> está nas restrições da API Key no Google Cloud Console.</li>
-                </ul>
-                <button onclick="document.getElementById('cors-alert').classList.add('hidden')" class="text-xs bg-yellow-200 hover:bg-yellow-300 px-2 py-1 rounded">Entendi</button>
-            </div>
-        </div>
-    </div>
-
     <!-- App Container -->
-    <div id="app-container" class="container mx-auto max-w-4xl p-4 pb-48 flex-grow">
+    <div id="app-container" class="container mx-auto max-w-4xl p-4 pb-32 flex-grow">
 
         <!-- Tela 1: Input -->
         <div id="initial-view" class="flex flex-col items-center justify-center min-h-[60vh]">
              <header class="text-center mb-8">
                 <h1 class="text-6xl font-bold text-gray-800 tracking-tighter">ddripp</h1>
-                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V18 (Debug)</p>
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V16 (Fine-Tuned)</p>
             </header>
             
             <div class="bg-white p-8 rounded-2xl card-shadow w-full relative max-w-2xl">
@@ -156,6 +130,7 @@
                 </div>
 
                 <input type="file" id="file-upload" class="hidden" accept=".pdf,image/*,application/pdf" multiple onchange="handleFileSelect(this)">
+                
                 <div id="file-preview-container" class="hidden flex flex-wrap gap-2 mt-4 p-2 bg-gray-50 rounded-lg border border-gray-100"></div>
                 
                 <button id="btn-gerar" onclick="handleInitialInput()" class="mt-6 w-full bg-blue-600 text-white font-bold py-4 px-6 rounded-xl hover:bg-blue-700 transition-all transform active:scale-95 shadow-lg hover:shadow-xl uppercase tracking-wide">
@@ -190,16 +165,19 @@
         <div id="itinerary-view" class="hidden bg-white p-4 rounded-2xl">
             <header id="trip-header" class="mb-8 bg-gray-50 p-6 rounded-2xl card-shadow border-l-4 border-blue-500">
                 <h2 id="trip-title" class="text-3xl font-bold text-gray-800 mb-2"></h2>
+                
                 <div class="flex flex-wrap items-center gap-3 text-gray-600 mb-3">
                     <a id="trip-destination-link" href="#" target="_blank" class="flex items-center bg-white px-3 py-1 rounded-full text-sm shadow-sm hover:text-blue-600 transition group cursor-pointer border border-gray-200">
                         <i class="fas fa-map-marker-alt mr-2 text-red-500"></i>
                         <span id="trip-destination" class="font-medium group-hover:underline"></span>
+                        <i class="fas fa-external-link-alt ml-2 text-xs text-gray-400"></i>
                     </a>
                     <div class="flex items-center bg-white px-3 py-1 rounded-full text-sm shadow-sm border border-gray-200">
                         <i class="fas fa-calendar-alt mr-2 text-blue-500"></i>
                         <span id="trip-date"></span>
                     </div>
                 </div>
+
                 <div id="weather-box" class="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-100 flex items-start hidden">
                     <i class="fas fa-cloud-sun mr-2 mt-1 text-blue-500 text-lg"></i>
                     <div>
@@ -208,7 +186,9 @@
                     </div>
                 </div>
             </header>
+
             <div id="itinerary-content" class="space-y-8"></div>
+            
             <div id="trip-footer" class="mt-12 flex justify-center space-x-4 pb-8 no-print">
                 <button onclick="shareTrip()" class="flex items-center bg-green-500 text-white font-bold py-3 px-6 rounded-full hover:bg-green-600 transition shadow-md hover:shadow-lg transform hover:-translate-y-1"><i class="fab fa-whatsapp mr-2 text-xl"></i> Partilhar</button>
                 <button onclick="downloadPDF()" class="flex items-center bg-red-500 text-white font-bold py-3 px-6 rounded-full hover:bg-red-600 transition shadow-md hover:shadow-lg transform hover:-translate-y-1"><i class="fas fa-file-pdf mr-2 text-xl"></i> Baixar PDF</button>
@@ -216,19 +196,7 @@
         </div>
     </div>
 
-    <!-- CONSOLE DE DEBUG VISUAL (Novo na V18) -->
-    <div id="debug-console-container" class="fixed bottom-0 left-0 w-full bg-gray-900 border-t-4 border-gray-800 z-50 h-32 no-print transition-all duration-300">
-        <div class="flex justify-between items-center bg-gray-800 px-4 py-1">
-            <span class="text-xs text-gray-400 font-bold uppercase">Consola de Diagnóstico (V18)</span>
-            <button onclick="document.getElementById('debug-console-container').classList.toggle('translate-y-28')" class="text-gray-400 hover:text-white"><i class="fas fa-chevron-down"></i></button>
-        </div>
-        <div id="debug-console" class="p-2 h-24 overflow-y-auto text-xs text-gray-300 font-mono">
-            <div>A aguardar comandos...</div>
-        </div>
-    </div>
-
-    <!-- Rodapé Input (Fica acima do console) -->
-    <div id="fixed-footer-input" class="hidden fixed bottom-32 left-0 w-full bg-white/90 backdrop-blur-md p-4 border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-40 no-print">
+    <div id="fixed-footer-input" class="hidden fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-md p-4 border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-40 no-print">
         <div class="container mx-auto max-w-2xl flex items-center gap-3">
             <div class="relative flex-grow">
                 <input type="text" id="adjustment-input" placeholder="Fale ou digite um ajuste..." class="w-full p-4 pr-12 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm outline-none transition">
@@ -242,18 +210,26 @@
     
     <script>
         // =================================================================
-        // CONFIGURAÇÃO
+        // CONFIGURAÇÃO DA IA (GEMINI)
+        // Você preenche aqui a sua chave de IA: https://aistudio.google.com/app/apikey
         // =================================================================
-        var TUNED_MODEL_NAME = "projects/6971887738/locations/us-central1/models/233104161669906432@1"; 
-        
-        // Chaves de Backup do usuário
-        var KEY_PART_1 = "AIzaSyD1fc4mUuaO841iQc"; 
-        var KEY_PART_2 = "AAA2-Y2mGb-TDoKnc"; 
+        var KEY_PART_1 = "AIzaSyBsLkwr1JTIjQHk"; // Sua chave do ddripp2
+        var KEY_PART_2 = "oCwARVG5O6hdZRyPtl0"; 
         var GEMINI_API_KEY = KEY_PART_1 + KEY_PART_2; 
         
-        var SERVER_SHARE_URL = "https://ddripp-server.onrender.com/share"; 
-        var FALLBACK_MODELS = ["gemini-1.5-flash", "gemini-1.5-pro"];
+        // =================================================================
+        // ⚠️ ÁREA DE FINE-TUNING (DADOS DE TREINO)
+        // Cole o conteúdo do seu arquivo de texto aqui dentro das aspas crases
+        // =================================================================
+        var MASTER_TRAINING_DATA = `
         
+        ↓↓↓ COLE SEU TREINO AQUI (Substitua esta linha) ↓↓↓
+        
+        `;
+        // =================================================================
+
+        var SERVER_SHARE_URL = "https://ddripp-server.onrender.com/share";
+        var MODELS_TO_TRY = ["gemini-2.5-Pro", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]; 
         var tripData = { origin: null, destination: null, startDate: null, returnDate: null, activities: [], title: '', tripObjective: '', weatherForecast: '', accommodation: null };
         var missingInfoQueue = [];
         var selectedFlightActivityIndex = -1; 
@@ -328,26 +304,9 @@
 
         function showLoader(msg) { document.getElementById('loading-message').textContent = msg; document.getElementById('loading-spinner').classList.remove('hidden'); }
         function hideLoader() { document.getElementById('loading-spinner').classList.add('hidden'); }
-        function showCORSAlert() { 
-            hideLoader();
-            document.getElementById('cors-alert').classList.remove('hidden'); 
-        }
 
-        // --- FUNÇÃO INTELIGENTE (Diagnóstico e Fallback) ---
+        // --- LLM CALL ---
         async function callGeminiSmart(promptText, responseSchema) {
-            
-            // 1. TENTATIVA COM VERTEX AI (MODELO TREINADO)
-            if (window.callVertexAI && TUNED_MODEL_NAME) {
-                try {
-                    window.logToScreen("Iniciando chamada Vertex AI...", 'info');
-                    const result = await window.callVertexAI(TUNED_MODEL_NAME, promptText, responseSchema);
-                    return result;
-                } catch (e) {
-                    window.logToScreen("Vertex AI Falhou. Tentando Fallback...", 'error');
-                }
-            }
-
-            // 2. FALLBACK REST API
             var payload = { 
                 contents: [{ parts: [] }], 
                 generationConfig: { responseMimeType: "application/json" } 
@@ -362,30 +321,26 @@
 
             if (responseSchema) payload.generationConfig.responseSchema = responseSchema;
 
-            for (var i = 0; i < FALLBACK_MODELS.length; i++) {
-                var model = FALLBACK_MODELS[i];
+            for (var i = 0; i < MODELS_TO_TRY.length; i++) {
+                var model = MODELS_TO_TRY[i];
                 var url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + GEMINI_API_KEY;
                 try {
-                    window.logToScreen(`Tentando Fallback REST: ${model}`, 'info');
+                    console.log("Tentando modelo:", model);
                     var response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                    
                     if (response.ok) {
+                        console.log(`Sucesso! Conectado ao ${model}`);
                         var result = await response.json();
                         var text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                        window.logToScreen("Sucesso via Fallback REST!", 'success');
                         return responseSchema ? JSON.parse(text) : text;
                     } else {
-                        window.logToScreen(`Erro Fallback [${model}]: Status ${response.status}`, 'error');
+                        console.warn(`Falha no modelo ${model}:`, response.status);
                     }
-                } catch (e) { 
-                    window.logToScreen(`Erro Fetch Fallback: ${e.message}`, 'error');
-                }
+                } catch (e) { console.warn(e); }
             }
-            window.logToScreen("FALHA TOTAL: Nem Vertex nem Fallback funcionaram.", 'error');
-            throw new Error("Falha total na IA. Verifique Console de Debug abaixo.");
+            throw new Error("Não foi possível conectar à IA. Verifique sua chave API.");
         }
 
-        // --- LÓGICA LOGÍSTICA ---
+        // --- CÁLCULO DE HORAS ---
         function subtractTime(timeStr, minutesToSubtract) {
             if(!timeStr) return "";
             var parts = timeStr.split(':');
@@ -403,6 +358,7 @@
             return d.getHours().toString().padStart(2, '0') + ":" + d.getMinutes().toString().padStart(2, '0');
         }
 
+        // --- POPUPS DE VOO ---
         function checkFlightClarification() {
             var flightIndex = tripData.activities.findIndex(function(a) {
                 var isVague = a.type === 'travel' && (!a.flightNumber || !a.airline) && a.description.toLowerCase().includes("voo");
@@ -485,14 +441,22 @@
             return false;
         }
 
+        // --- PROMPT MESTRE (Com injeção de Fine-Tuning) ---
         async function handleInitialInput() {
             var inputEl = document.getElementById('initial-input');
             var inputVal = inputEl.value;
+            // Validação
             if ((!inputVal || inputVal.trim() === "") && selectedFiles.length === 0) return alert('Por favor, diga algo ou anexe um arquivo.');
             
-            showLoader('Conectando ao Cérebro ddripp (Vertex AI)...');
+            showLoader('A planear logística...');
             var today = new Date().toLocaleDateString('pt-BR');
             
+            // INJEÇÃO DO FINE-TUNING NO PROMPT
+            var examplesStr = "";
+            if (typeof MASTER_TRAINING_DATA !== 'undefined' && MASTER_TRAINING_DATA.length > 50 && !MASTER_TRAINING_DATA.includes("COLE SEU TREINO AQUI")) {
+                examplesStr = "\n[DADOS DE TREINO DE ALTA FIDELIDADE (FINE-TUNING)]\n" + MASTER_TRAINING_DATA + "\n";
+            }
+
             var schemaStructure = {
                 type: "OBJECT",
                 properties: {
@@ -539,13 +503,15 @@
             var masterPrompt = "[ROLE]\n" +
                 "Você é o 'ddripp', um planejador logístico expert.\n\n" +
                 "[DATA ATUAL]: " + today + "\n" +
+                examplesStr + "\n" + 
                 "[REGRAS CRÍTICAS]\n" +
-                "1. Extração Compulsória: Extraia CADA evento do texto ou ARQUIVOS ANEXOS.\n" +
-                "2. Datas: YYYY-MM-DD.\n" +
-                "3. Localização: 'location' apenas nome pesquisável.\n" +
-                "4. Voo: Se faltar voo/cia, PREENCHA 'flightOptions'. Se tiver, preencha flightNumber.\n" +
+                "1. Extração Compulsória: Extraia CADA evento e informação de viagem presente no texto ou ARQUIVOS ANEXOS.\n" +
+                "2. Datas: Converta TODAS as referências relativas (ex: 'próxima terça') para o formato de data YYYY-MM-DD.\n" +
+                "3. Localização: 'location' deve ter APENAS o nome de um lugar pesquisável.\n" +
+                "4. Voo: Voo = atividade 'travel'. Se faltar voo/cia, PREENCHA 'flightOptions' com 3 opções prováveis. Se tiver tudo, preencha flightNumber.\n" +
                 "5. Deslocamento: Se não houver info, use 'ASK_USER'.\n" +
-                "6. NUNCA faça perguntas no output. Use 'missingCriticalInfo'.\n\n" +
+                "6. NUNCA faça perguntas no output. Use 'missingCriticalInfo'.\n" +
+                "7. MICRO-DESLOCAMENTO: A LÓGICA DE TRANSFER É FEITA PELO CÓDIGO (fillGeographicGaps). A IA SÓ DEVE EXTRAIR EVENTOS PRINCIPAIS.\n\n" +
                 "[JSON SCHEMA DE SAÍDA]\n" +
                 JSON.stringify(schemaStructure, null, 2) + "\n\n" +
                 "[INPUT]\n" +
@@ -565,10 +531,10 @@
                         tripData = { ...tripData, ...result };
                     }
                     if(!tripData.activities) tripData.activities = [];
-                    selectedFiles = []; 
+                    selectedFiles = []; // Limpa arquivos após envio
                     renderFilePreviews();
                     
-                    fillGeographicGaps(); 
+                    fillGeographicGaps(); // A CADEIA LOGÍSTICA ESTÁ AQUI
 
                     if (checkFlightClarification()) return; 
                     if (checkTransportClarification()) return;
@@ -580,24 +546,29 @@
                 }
             } catch (e) {
                 hideLoader();
-                // O alerta visual já deve ter aparecido se foi CORS
-                if(!document.getElementById('cors-alert').classList.contains('hidden')) return;
                 alert("Erro ao processar: " + e.message);
             }
         }
 
+        // --- CÉREBRO DA CADEIA LOGÍSTICA ---
         function fillGeographicGaps() {
             tripData.activities.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
             var newActivities = [];
             var lastKnownLocation = tripData.accommodation || tripData.origin || null;
+            var isFirstTransfer = true; 
 
             for (var i = 0; i < tripData.activities.length; i++) {
                 var curr = tripData.activities[i];
+                
+                // 1. CADEIA AÉREA: VOO -> TRANSFER
                 if (curr.type === 'travel' && curr.destinationAirport && curr.flightNumber) {
                     newActivities.push(curr); 
+                    
                     var arrivalTime = addTime(curr.time, curr.flightDurationMinutes || 120);
                     var transferStart = addTime(arrivalTime, 30); 
+                    
                     var nextLocation = tripData.accommodation || null;
+                    
                     if (i < tripData.activities.length - 1) {
                         var next = tripData.activities[i+1];
                         if(next.location && !next.location.toLowerCase().includes("aeroporto")) {
@@ -606,6 +577,7 @@
                     } else if (!tripData.accommodation) {
                         nextLocation = tripData.destination || null;
                     }
+                    
                     var transferDest = nextLocation || "Acomodação/Ponto de Encontro";
                     if (tripData.returnDate && curr.date === tripData.returnDate && curr.destinationAirport.includes(tripData.origin)) {
                         transferDest = "Casa / Origem";
@@ -625,10 +597,14 @@
                     } else {
                         lastKnownLocation = curr.destinationAirport;
                     }
+                    isFirstTransfer = false;
                     continue;
                 }
+
+                // 2. CADEIA TERRESTRE
                 if (curr.location) {
                     var cleanedLast = lastKnownLocation ? lastKnownLocation.split(' para ')[lastKnownLocation.split(' para ').length - 1] : null;
+                    
                     if (cleanedLast && curr.location !== cleanedLast && !curr.description.includes(cleanedLast)) {
                         var travelTime = subtractTime(curr.time, 45); 
                         newActivities.push({
@@ -656,32 +632,39 @@
             else generateItinerary();
         }
 
+        // --- NOVO: ASK NEXT COM AUTOCOMPLETE DO GOOGLE MAPS ---
         function askNext() {
             var q = missingInfoQueue[0];
             document.getElementById('gap-question').textContent = q.q;
             var input = document.getElementById('gap-input');
             input.value = '';
             
+            // Se for LOCALIZAÇÃO, usamos o novo PlaceAutocompleteElement
             if (q.type === 'location') {
                 document.getElementById('gap-input').classList.add('hidden');
                 var container = document.getElementById('place-autocomplete-container');
-                container.innerHTML = ''; 
+                container.innerHTML = ''; // Limpa anterior
                 container.classList.remove('hidden');
 
+                // Importa a biblioteca e cria o elemento
                 google.maps.importLibrary("places").then(({ PlaceAutocompleteElement }) => {
                     const autocomplete = new PlaceAutocompleteElement();
                     autocomplete.placeholder = "Digite a cidade ou local...";
                     container.appendChild(autocomplete);
+
                     autocomplete.addEventListener("gmp-places-select", async ({ place }) => {
                         await place.fetchFields({ fields: ["displayName", "formattedAddress"] });
                         const val = place.formattedAddress || place.displayName;
+                        // Joga o valor no input escondido para a função handleGapInput pegar
                         input.value = val;
                     });
                 }).catch(e => {
-                    console.warn("Erro Places API:", e);
+                    console.warn("Erro ao carregar Novo Places API:", e);
+                    // Fallback se der erro no import
                     document.getElementById('gap-input').classList.remove('hidden');
                     document.getElementById('place-autocomplete-container').classList.add('hidden');
                 });
+
             } else if (q.type === 'date') {
                 input.type = 'date';
                 document.getElementById('gap-input').classList.remove('hidden');
@@ -691,6 +674,7 @@
                 document.getElementById('gap-input').classList.remove('hidden');
                 document.getElementById('place-autocomplete-container').classList.add('hidden');
             }
+            
             document.getElementById('gap-filling-view').classList.remove('hidden');
             document.getElementById('initial-view').classList.add('hidden');
             if(q.type !== 'location') input.focus();
@@ -699,6 +683,7 @@
         function handleGapInput() {
             var val = document.getElementById('gap-input').value;
             if (!val) return alert('Por favor, responda ou selecione um local.');
+            
             if (missingInfoQueue[0].key.startsWith('transport_fix_')) {
                 var idx = parseInt(missingInfoQueue[0].key.split('_')[2]);
                 tripData.activities[idx].transport = val;
@@ -734,15 +719,18 @@
             } else {
                 weatherBox.classList.add('hidden');
             }
+            
             if (SERVER_SHARE_URL && SERVER_SHARE_URL.includes("http")) {
                 var dest = tripData.destination || "Viagem";
                 var sDate = tripData.startDate || "";
                 var pingUrl = `${SERVER_SHARE_URL}?title=Ping&dest=${encodeURIComponent(dest)}&date=${encodeURIComponent(sDate)}&warmup=true`;
                 fetch(pingUrl, { mode: 'no-cors' }).catch(e => console.log("Servidor acordado!"));
             }
+
             renderItinerary();
         }
 
+        // --- RESTAURAÇÃO: Visual de 3 Colunas + Dropdown + Timeline ---
         function renderItinerary() {
             var container = document.getElementById('itinerary-content');
             container.innerHTML = '';
@@ -847,7 +835,7 @@
             var input = document.getElementById('adjustment-input');
             var text = input.value;
             if (!text.trim()) return;
-            showLoader('Ajustando com IA...');
+            showLoader('Ajustando...');
             var prompt = "Roteiro ATUAL: " + JSON.stringify(tripData.activities) + ". AJUSTE: \"" + text + "\". Mantenha JSON.";
             try {
                 var result = await callGeminiSmart(prompt, null);
