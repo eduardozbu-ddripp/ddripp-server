@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ddripp - Digital Roadbook (V32 FT Final)</title>
+    <title>ddripp - Digital Roadbook (V33 Fix)</title>
     
     <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✈️</text></svg>">
@@ -52,16 +52,15 @@
 
       // DETETOR DE ERROS DE DOMÍNIO
       window.addEventListener('unhandledrejection', function(event) {
-          if (event.reason && event.reason.message && (event.reason.message.includes("blocked") || event.reason.message.includes("PERMISSION_DENIED"))) {
+          if (event.reason && event.reason.message && (event.reason.message.includes("blocked") || event.reason.message.includes("PERMISSION_DENIED") || event.reason.message.includes("CORS"))) {
               console.error("BLOQUEIO DETETADO (CORS/API Key):", event.reason);
-              window.logToScreen(`BLOQUEIO DE SEGURANÇA: URL não autorizada.`, 'error');
+              window.logToScreen(`BLOQUEIO DE SEGURANÇA: ${event.reason.message}`, 'error');
               
               const alertBox = document.getElementById('cors-alert');
               const alertMsg = document.getElementById('cors-msg');
-              const currentUrl = window.location.href;
               
               if(alertBox && alertMsg) {
-                  alertMsg.innerHTML = `<strong>Ambiente de Teste Bloqueado.</strong><br>O Google Cloud bloqueou este URL de pré-visualização.<br><br>URL Atual: <code class="text-xs bg-red-100 p-1 rounded">${currentUrl}</code><br><br>👉 <strong>Solução Rápida:</strong> Teste no domínio oficial (GitHub Pages) ou adicione este URL às restrições da API Key.`;
+                  alertMsg.innerHTML = `<strong>Acesso Negado (CORS/Permissão).</strong><br>O Google Cloud bloqueou a conexão. Verifique se o domínio <code>${window.location.hostname}</code> está autorizado no Firebase Console > Authentication > Settings > Authorized Domains e na API Key no Google Cloud.`;
                   alertBox.classList.remove('hidden');
               }
           }
@@ -88,9 +87,9 @@
           const vertexAI = getVertexAI(app, { location: "us-central1" });
           
           window.callVertexAI = async function(modelName, promptText, schema) {
-              // 1. Tenta Fine-Tuned (AGORA NO PROJETO CORRETO)
+              // 1. Tenta Fine-Tuned
               if (modelName && modelName.includes('projects/')) {
-                  window.logToScreen(`Tentando Fine-Tuned (ddripp-v2)...`, 'info');
+                  window.logToScreen(`Tentando Fine-Tuned...`, 'info');
                   try {
                       const tunedModel = getGenerativeModel(vertexAI, { 
                           model: modelName,
@@ -101,6 +100,8 @@
                       return JSON.parse(result.response.text());
                   } catch (error) {
                       window.logToScreen(`Fine-Tuned indisponível (Tentando Next-Gen). Erro: ${error.message}`, 'warning');
+                      // Se for erro de rede/CORS, lança para o detetor global
+                      if (error.message.includes("fetch") || error.message.includes("network")) throw error;
                   }
               }
 
@@ -118,12 +119,12 @@
                       return JSON.parse(result.response.text());
                   } catch (err) {
                       window.logToScreen(`Falha no ${modelVersion}: ${err.message}`, 'warning');
-                      if(err.message.includes("403") || err.message.includes("blocked")) throw err;
+                      if(err.message.includes("403") || err.message.includes("blocked") || err.message.includes("fetch")) throw err;
                   }
               }
               throw new Error("Todos os modelos falharam.");
           };
-          window.logToScreen("Sistema V32 (Fine-Tuned Final) Pronto.", 'success');
+          window.logToScreen("Sistema V33 (Permissions Fix) Pronto.", 'success');
       } catch (e) {
           window.logToScreen(`Erro Init: ${e.message}`, 'error');
       }
@@ -194,7 +195,7 @@
         <div id="initial-view" class="flex flex-col items-center justify-center min-h-[60vh]">
              <header class="text-center mb-8">
                 <h1 class="text-6xl font-bold text-gray-800 tracking-tighter">ddripp</h1>
-                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V32 (FT Final)</p>
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V33 (Fix)</p>
             </header>
             
             <div class="bg-white p-8 rounded-2xl card-shadow w-full relative max-w-2xl">
@@ -284,7 +285,7 @@
     <!-- CONSOLE DE DEBUG VISUAL -->
     <div id="debug-console-container" class="fixed bottom-0 left-0 w-full bg-gray-900 border-t-4 border-gray-800 z-50 h-32 no-print transition-all duration-300 translate-y-28 hover:translate-y-0 opacity-80 hover:opacity-100">
         <div class="flex justify-between items-center bg-gray-800 px-4 py-1 cursor-pointer" onclick="document.getElementById('debug-console-container').classList.toggle('translate-y-28')">
-            <span class="text-xs text-gray-400 font-bold uppercase">Status do Sistema (V32)</span>
+            <span class="text-xs text-gray-400 font-bold uppercase">Status do Sistema (V33)</span>
             <span class="text-gray-400 text-xs">▲ Logs</span>
         </div>
         <div id="debug-console" class="p-2 h-24 overflow-y-auto text-xs text-gray-300 font-mono">
