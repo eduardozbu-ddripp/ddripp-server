@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ddripp - Digital Roadbook (V39 Vertex Unificado)</title>
+    <title>ddripp - Digital Roadbook (V40 Anti-Crash)</title>
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✈️</text></svg>">
 
@@ -57,73 +57,89 @@
               const auth = getAuth(app);
               
               window.logToScreen("Autenticando no Firebase...", 'info');
+              // Tenta autenticar. Se falhar (erro 400), caímos no catch mas NÃO paramos o sistema.
               await signInAnonymously(auth);
+              
               window.logToScreen("Autenticação Anónima: OK", 'success');
-              
-              // CORREÇÃO V39: Definir location explicitamente é crucial para modelos Tuned
               vertexAIInstance = getVertexAI(app, { location: "us-central1" });
-              
               isAuthReady = true;
-              window.logToScreen("Sistema V39 (Vertex Central) Pronto.", 'success');
+              window.logToScreen("Sistema V40 (Vertex Conectado) Pronto.", 'success');
+
           } catch (e) {
-              window.logToScreen(`ERRO INIT: ${e.message}`, 'error');
+              window.logToScreen(`AVISO AUTH: ${e.code || e.message}`, 'warning');
+              window.logToScreen("Usando modo REST (Sem Fine-Tuning) devido a erro de Auth.", 'warning');
+              // Não lançamos erro aqui para permitir que o app carregue no modo fallback
           }
       }
       initSystem();
 
       // =================================================================
-      // FUNÇÃO DE GERAÇÃO HÍBRIDA (SDK PURO)
+      // FUNÇÃO DE GERAÇÃO À PROVA DE FALHAS (SDK + REST)
       // =================================================================
       window.callVertexAI = async function(modelName, promptText, schema) {
           
-          if (!vertexAIInstance || !isAuthReady) {
-              throw new Error("Sistema aguardando conexão segura... Tente em 2 segundos.");
+          // 1. TENTATIVA PREFERENCIAL: SDK Vertex AI (Modelo Ajustado)
+          // Só tenta se o Auth tiver funcionado
+          if (isAuthReady && vertexAIInstance) {
+              window.logToScreen(`Tentando Fine-Tuned (Vertex SDK)...`, 'info');
+              try {
+                  const tunedModel = getGenerativeModel(vertexAIInstance, {
+                      model: window.TUNED_MODEL_FULL_NAME,
+                      generationConfig: { 
+                          responseMimeType: "application/json", 
+                          responseSchema: schema,
+                          temperature: 0.35 
+                      }
+                  });
+
+                  const result = await tunedModel.generateContent(promptText);
+                  const responseText = result.response.text();
+                  window.logToScreen("SUCESSO: Fine-Tuned respondeu!", 'success');
+                  return JSON.parse(responseText);
+
+              } catch (error) {
+                  window.logToScreen(`Fine-Tuned falhou (${error.message}). Ativando Fallback...`, 'warning');
+                  // Se falhar, continuamos para o fallback REST abaixo
+              }
+          } else {
+              window.logToScreen("Auth indisponível. Saltando para Fallback REST.", 'warning');
           }
 
-          // 1. TENTATIVA VERTEX AI (Modelo Ajustado)
-          window.logToScreen(`Tentando Fine-Tuned (Vertex SDK)...`, 'info');
-          try {
-              const tunedModel = getGenerativeModel(vertexAIInstance, {
-                  model: window.TUNED_MODEL_FULL_NAME,
-                  generationConfig: { 
-                      responseMimeType: "application/json", 
-                      responseSchema: schema,
-                      temperature: 0.35 
-                  }
-              });
-
-              const result = await tunedModel.generateContent(promptText);
-              const responseText = result.response.text();
-              window.logToScreen("SUCESSO: Fine-Tuned respondeu!", 'success');
-              return JSON.parse(responseText);
-
-          } catch (error) {
-              window.logToScreen(`Fine-Tuned falhou (${error.message}). Tentando Fallback...`, 'warning');
-              // Continua para o fallback...
-          }
-
-          // 2. FALLBACK VIA VERTEX SDK (Não REST)
-          // Usamos o SDK para aproveitar a autenticação que já funcionou
-          const fallbackName = "gemini-1.5-flash";
-          window.logToScreen(`Usando Fallback (SDK: ${fallbackName})...`, 'info');
+          // 2. FALLBACK FINAL: API REST (Fetch Direto)
+          // Esta abordagem ignora o Firebase Auth e usa a chave diretamente.
+          // É a rede de segurança final.
+          const fallbackModel = "gemini-1.5-flash";
+          window.logToScreen(`Usando Fallback REST (${fallbackModel})...`, 'info');
           
           try {
-              const fallbackModel = getGenerativeModel(vertexAIInstance, {
-                  model: fallbackName,
-                  generationConfig: { 
-                      responseMimeType: "application/json", 
-                      responseSchema: schema 
-                  }
+              const url = `https://generativelanguage.googleapis.com/v1beta/models/${fallbackModel}:generateContent?key=${window.API_KEY_FINAL}`;
+              
+              const response = await fetch(url, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                      contents: [{ parts: [{ text: promptText }] }],
+                      generationConfig: { 
+                          responseMimeType: "application/json", 
+                          responseSchema: schema 
+                      }
+                  })
               });
 
-              const result = await fallbackModel.generateContent(promptText);
-              const responseText = result.response.text();
-              window.logToScreen(`SUCESSO: Fallback (SDK) funcionou!`, 'success');
-              return JSON.parse(responseText);
+              if (!response.ok) {
+                  const errData = await response.json();
+                  throw new Error(`Erro API Google: ${errData.error?.message || response.statusText}`);
+              }
+              
+              const data = await response.json();
+              const text = data.candidates[0].content.parts[0].text;
+              window.logToScreen(`SUCESSO: Fallback (REST) funcionou!`, 'success');
+              return JSON.parse(text);
 
           } catch (err) {
               window.logToScreen(`ERRO FATAL: ${err.message}`, 'error');
-              alert("Erro Crítico: Falha na conexão com Google Cloud. Verifique quotas ou internet.");
+              if(err.message.includes("400")) alert("Erro de Permissão: Ative 'Anonymous Auth' no Firebase Console!");
+              else alert("Erro de Conexão: Verifique a internet ou as quotas da API.");
               throw err;
           }
       };
@@ -178,7 +194,7 @@
         <div id="initial-view" class="flex flex-col items-center justify-center min-h-[60vh]">
              <header class="text-center mb-8">
                 <h1 class="text-6xl font-bold text-gray-800 tracking-tighter">ddripp</h1>
-                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V39 (Vertex Unificado)</p>
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V40 (Anti-Crash)</p>
             </header>
             
             <div class="bg-white p-8 rounded-2xl card-shadow w-full relative max-w-2xl">
@@ -258,7 +274,7 @@
 
     <div id="debug-console-container" class="fixed bottom-0 left-0 w-full bg-gray-900 border-t-4 border-gray-800 z-50 h-32 no-print transition-all duration-300 translate-y-28 hover:translate-y-0 opacity-80 hover:opacity-100">
         <div class="flex justify-between items-center bg-gray-800 px-4 py-1 cursor-pointer" onclick="document.getElementById('debug-console-container').classList.toggle('translate-y-28')">
-            <span class="text-xs text-gray-400 font-bold uppercase">Status do Sistema (V39)</span>
+            <span class="text-xs text-gray-400 font-bold uppercase">Status do Sistema (V40)</span>
             <span class="text-gray-400 text-xs">▲ Logs</span>
         </div>
         <div id="debug-console" class="p-2 h-24 overflow-y-auto text-xs text-gray-300 font-mono">
