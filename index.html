@@ -14,8 +14,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 
     <script>
-        const k1 = "AIzaSyCVipGZZc7Pd2d2cjg";
-        const k2 = "_90RKXfzPC2vS4jk";
+        var k1 = "AIzaSyCVipGZZc7Pd2d2cjg";
+        var k2 = "_90RKXfzPC2vS4jk";
         window.API_KEY_FINAL = k1 + k2;
     </script>
 
@@ -470,4 +470,448 @@
             });
             var manualDiv = document.createElement('div');
             manualDiv.className = "border border-gray-200 rounded-lg p-3 hover:bg-blue-50 cursor-pointer transition";
-            manualDiv.innerHTML = '<div class="flex items-center gap-2 mb-2"><input type="radio" name="flight-opt" value="manual" class="w-5 h-5 text-blue-600">
+            manualDiv.innerHTML = '<div class="flex items-center gap-2 mb-2"><input type="radio" name="flight-opt" value="manual" class="w-5 h-5 text-blue-600"><span class="font-bold text-gray-800">Inserir Manualmente</span></div><input type="text" id="manual-flight-input" placeholder="Ex: TAP TP123, 14:00, 90min" class="w-full p-2 border rounded text-sm" onclick="event.stopPropagation()">';
+            list.appendChild(manualDiv);
+            document.getElementById('initial-view').classList.add('hidden');
+            document.getElementById('gap-filling-view').classList.add('hidden');
+            document.getElementById('flight-selection-view').classList.remove('hidden');
+        }
+
+        function confirmFlightSelection() {
+            var selected = document.querySelector('input[name="flight-opt"]:checked');
+            if (!selected) return alert("Selecione uma opção.");
+            var activity = tripData.activities[selectedFlightActivityIndex];
+            if (selected.value === 'manual') {
+                var manualText = document.getElementById('manual-flight-input').value;
+                if(!manualText) return alert("Digite os dados.");
+                activity.description = "Voo " + manualText;
+                activity.flightNumber = manualText.split(' ')[1] || "0000";
+                activity.airline = manualText.split(' ')[0] || "Cia";
+                activity.flightDurationMinutes = 120; 
+                delete activity.flightOptions;
+            } else {
+                var opt = tripData.activities[selectedFlightActivityIndex].flightOptions ? tripData.activities[selectedFlightActivityIndex].flightOptions[parseInt(selected.value)] : [{ airline: "Gol", flightNumber: "G3-1000", time: activity.time, origin: "GRU", destination: "GIG", durationMinutes: 60 }][0];
+                activity.time = opt.time;
+                activity.airline = opt.airline;
+                activity.flightNumber = opt.flightNumber;
+                activity.originAirport = opt.origin;
+                activity.destinationAirport = opt.destination;
+                activity.flightDurationMinutes = opt.durationMinutes;
+                delete activity.flightOptions;
+            }
+            document.getElementById('flight-selection-view').classList.add('hidden');
+            if (!checkFlightClarification()) checkTransportClarification();
+        }
+
+        function checkTransportClarification() {
+            var transportIndex = tripData.activities.findIndex(function(a) { return a.transport === "ASK_USER"; });
+            if (transportIndex !== -1) {
+                selectedTransportActivityIndex = transportIndex;
+                var activity = tripData.activities[transportIndex];
+                missingInfoQueue.push({ key: 'transport_fix_' + transportIndex, q: 'Como vai se deslocar para: ' + activity.description + '?', type: 'text' });
+                askNext();
+                return true;
+            }
+            checkMissingInfo();
+            return false;
+        }
+
+        async function handleInitialInput() {
+            var inputEl = document.getElementById('initial-input');
+            var inputVal = inputEl.value;
+            if ((!inputVal || inputVal.trim() === "") && selectedFiles.length === 0) return alert('Por favor, diga algo ou anexe um arquivo.');
+            showLoader('Conectando ao Cérebro ddripp (Vertex AI)...');
+            var today = new Date().toLocaleDateString('pt-BR');
+            var schemaStructure = {
+                type: "OBJECT",
+                properties: {
+                    "missingCriticalInfo": { "type": "STRING" },
+                    "tripObjective": { "type": "STRING" },
+                    "weatherForecast": { "type": "STRING" },
+                    "origin": { "type": "STRING" },
+                    "destination": { "type": "STRING" },
+                    "startDate": { "type": "STRING" },
+                    "returnDate": { "type": "STRING" },
+                    "accommodation": { "type": "STRING" },
+                    "activities": { 
+                        "type": "ARRAY", 
+                        "items": { 
+                            "type": "OBJECT", 
+                            "properties": {
+                                "date": { "type": "STRING" },
+                                "time": { "type": "STRING" },
+                                "person": { "type": "STRING" },
+                                "description": { "type": "STRING" },
+                                "location": { "type": "STRING" },
+                                "type": { "type": "STRING", "enum": ["travel", "commitment", "meal", "leisure", "free_time"] },
+                                "transport": { "type": "STRING" },
+                                "flightNumber": { "type": "STRING" },
+                                "airline": { "type": "STRING" },
+                                "originAirport": { "type": "STRING" },
+                                "destinationAirport": { "type": "STRING" },
+                                "flightDurationMinutes": { "type": "INTEGER" },
+                                "flightOptions": {
+                                    "type": "ARRAY",
+                                    "items": {
+                                        "type": "OBJECT",
+                                        "properties": { "airline": {"type": "STRING"}, "flightNumber": {"type": "STRING"}, "time": {"type": "STRING"}, "origin": {"type": "STRING"}, "destination": {"type": "STRING"}, "durationMinutes": {"type": "INTEGER"} }
+                                    }
+                                }
+                            },
+                            "required": ["date", "time", "description", "type"]
+                        }
+                    }
+                },
+                "required": ["activities", "tripObjective"]
+            };
+            var masterPrompt = "[ROLE]\n" +
+                "Você é o 'ddripp', um planejador logístico expert.\n\n" +
+                "[DATA ATUAL]: " + today + "\n" +
+                "[REGRAS CRÍTICAS]\n" +
+                "1. Extração Compulsória: Extraia CADA evento do texto ou ARQUIVOS ANEXOS.\n" +
+                "2. Datas: YYYY-MM-DD.\n" +
+                "3. Localização: 'location' apenas nome pesquisável.\n" +
+                "4. Voo: Se faltar voo/cia, PREENCHA 'flightOptions'. Se tiver, preencha flightNumber.\n" +
+                "5. Deslocamento: Se não houver info, use 'ASK_USER'.\n" +
+                "6. NUNCA faça perguntas no output. Use 'missingCriticalInfo'.\n\n" +
+                "[JSON SCHEMA DE SAÍDA]\n" +
+                JSON.stringify(schemaStructure, null, 2) + "\n\n" +
+                "[INPUT]\n" +
+                "\"" + inputVal + "\"\n\n" +
+                "[JSON]";
+
+            try {
+                var result = await callGeminiSmart(masterPrompt, schemaStructure);
+                hideLoader();
+                if (result) { 
+                    if (typeof result === 'string') {
+                        try {
+                            var cleanResult = result.replace(/```json/g, "").replace(/```/g, "").trim();
+                            tripData = { ...tripData, ...JSON.parse(cleanResult) };
+                        } catch (e) { console.log("Erro parse manual", e); }
+                    } else {
+                        tripData = { ...tripData, ...result };
+                    }
+                    if(!tripData.activities) tripData.activities = [];
+                    selectedFiles = []; renderFilePreviews();
+                    fillGeographicGaps(); 
+                    if (checkFlightClarification()) return; 
+                    if (checkTransportClarification()) return;
+                    if (tripData.missingCriticalInfo) {
+                        if (!tripData.destination && tripData.missingCriticalInfo.toLowerCase().includes("destino")) missingInfoQueue.push({ key: 'destination', q: tripData.missingCriticalInfo, type: 'location' });
+                        else if (!tripData.startDate && tripData.missingCriticalInfo.toLowerCase().includes("data")) missingInfoQueue.push({ key: 'startDate', q: tripData.missingCriticalInfo, type: 'date' });
+                    }
+                    checkMissingInfo();
+                }
+            } catch (e) {
+                hideLoader();
+                alert("Erro ao processar: " + e.message);
+            }
+        };
+
+        function fillGeographicGaps() {
+            tripData.activities.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+            var newActivities = [];
+            var lastKnownLocation = tripData.accommodation || tripData.origin || null;
+            for (var i = 0; i < tripData.activities.length; i++) {
+                var curr = tripData.activities[i];
+                if (curr.type === 'travel' && curr.destinationAirport && curr.flightNumber) {
+                    newActivities.push(curr);
+                    var arrivalTime = addTime(curr.time, curr.flightDurationMinutes || 120);
+                    var transferStart = addTime(arrivalTime, 30); 
+                    var nextLocation = tripData.accommodation || null;
+                    if (i < tripData.activities.length - 1) {
+                        var next = tripData.activities[i+1];
+                        if(next.location && !next.location.toLowerCase().includes("aeroporto")) {
+                            nextLocation = next.location;
+                        }
+                    } else if (!tripData.accommodation) {
+                        nextLocation = tripData.destination || null;
+                    }
+                    var transferDest = nextLocation || "Acomodação/Ponto de Encontro";
+                    if (tripData.returnDate && curr.date === tripData.returnDate && curr.destinationAirport.includes(tripData.origin)) {
+                        transferDest = "Casa / Origem";
+                    }
+
+                    if (nextLocation && !nextLocation.includes(curr.destinationAirport)) {
+                        newActivities.push({
+                            date: curr.date,
+                            time: transferStart,
+                            person: curr.person,
+                            description: "Transfer Aeroporto -> " + transferDest,
+                            location: curr.destinationAirport + " para " + transferDest,
+                            type: "travel",
+                            transport: "Transfer/Uber"
+                        });
+                        lastKnownLocation = transferDest;
+                    } else {
+                        lastKnownLocation = curr.destinationAirport;
+                    }
+                    continue;
+                }
+                if (curr.location) {
+                    var cleanedLast = lastKnownLocation ? lastKnownLocation.split(' para ')[lastKnownLocation.split(' para ').length - 1] : null;
+                    if (cleanedLast && curr.location !== cleanedLast && !curr.description.includes(cleanedLast)) {
+                        var travelTime = subtractTime(curr.time, 45);
+                        newActivities.push({
+                            date: curr.date,
+                            time: travelTime,
+                            person: curr.person,
+                            description: "Deslocamento: " + cleanedLast + " -> " + curr.location,
+                            location: cleanedLast + " para " + curr.location,
+                            type: "travel",
+                            transport: "Deslocamento Urbano"
+                        });
+                    }
+                    lastKnownLocation = curr.location;
+                }
+                newActivities.push(curr);
+            }
+            tripData.activities = newActivities.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+        }
+
+        function checkMissingInfo() {
+            if (!tripData.destination && missingInfoQueue.length === 0) missingInfoQueue.push({ key: 'destination', q: 'Qual o destino da viagem?', type: 'location' });
+            if (!tripData.startDate && missingInfoQueue.length === 0) missingInfoQueue.push({ key: 'startDate', q: 'Qual a data de início?', type: 'date' });
+            if (!tripData.returnDate && missingInfoQueue.length === 0) missingInfoQueue.push({ key: 'returnDate', q: 'Qual a data de retorno?', type: 'date' });
+            if (missingInfoQueue.length > 0) askNext();
+            else generateItinerary();
+        }
+
+        function askNext() {
+            var q = missingInfoQueue[0];
+            document.getElementById('gap-question').textContent = q.q;
+            var input = document.getElementById('gap-input');
+            input.value = '';
+            if (q.type === 'location') {
+                document.getElementById('gap-input').classList.add('hidden');
+                var container = document.getElementById('place-autocomplete-container');
+                container.innerHTML = ''; 
+                container.classList.remove('hidden');
+                google.maps.importLibrary("places").then(({ PlaceAutocompleteElement }) => {
+                    const autocomplete = new PlaceAutocompleteElement();
+                    autocomplete.placeholder = "Digite a cidade ou local...";
+                    container.appendChild(autocomplete);
+                    autocomplete.addEventListener("gmp-places-select", async ({ place }) => {
+                        await place.fetchFields({ fields: ["displayName", "formattedAddress"] });
+                        const val = place.formattedAddress || place.displayName;
+                        input.value = val;
+                    });
+                }).catch(e => {
+                    console.warn("Erro Places API:", e);
+                    document.getElementById('gap-input').classList.remove('hidden');
+                    document.getElementById('place-autocomplete-container').classList.add('hidden');
+                });
+            } else if (q.type === 'date') {
+                input.type = 'date';
+                document.getElementById('gap-input').classList.remove('hidden');
+                document.getElementById('place-autocomplete-container').classList.add('hidden');
+            } else {
+                input.type = 'text';
+                document.getElementById('gap-input').classList.remove('hidden');
+                document.getElementById('place-autocomplete-container').classList.add('hidden');
+            }
+            document.getElementById('gap-filling-view').classList.remove('hidden');
+            document.getElementById('initial-view').classList.add('hidden');
+            if(q.type !== 'location') input.focus();
+        }
+
+        function handleGapInput() {
+            var val = document.getElementById('gap-input').value;
+            if (!val) return alert('Por favor, responda ou selecione um local.');
+            if (missingInfoQueue[0].key.startsWith('transport_fix_')) {
+                var idx = parseInt(missingInfoQueue[0].key.split('_')[2]);
+                tripData.activities[idx].transport = val;
+                tripData.activities[idx].description += " (" + val + ")";
+            } else {
+                tripData[missingInfoQueue[0].key] = val;
+            }
+            missingInfoQueue.shift();
+            if (missingInfoQueue.length > 0) askNext();
+            else {
+                document.getElementById('gap-filling-view').classList.add('hidden');
+                if (checkTransportClarification()) return;
+                generateItinerary();
+            }
+        }
+
+        function generateItinerary() {
+            document.getElementById('initial-view').classList.add('hidden');
+            document.getElementById('itinerary-view').classList.remove('hidden');
+            document.getElementById('fixed-footer-input').classList.remove('hidden');
+            document.getElementById('trip-title').textContent = tripData.tripObjective || ("Viagem para " + tripData.destination);
+            var destEl = document.getElementById('trip-destination');
+            destEl.textContent = tripData.destination;
+            var wikiLink = document.getElementById('trip-destination-link');
+            if(tripData.destination) wikiLink.href = "https://pt.wikipedia.org/wiki/Special:Search?search=" + encodeURIComponent(tripData.destination);
+            else wikiLink.style.display = 'none';
+            document.getElementById('trip-date').textContent = tripData.startDate + " a " + tripData.returnDate;
+            loadHeaderImage();
+            fetchWeather(tripData.destination);
+            renderItinerary();
+        }
+
+        function renderItinerary() {
+            var container = document.getElementById('itinerary-content');
+            container.innerHTML = '';
+            if(tripData.activities) {
+                tripData.activities.sort(function(a, b) { return (a.date + a.time).localeCompare(b.date + b.time); });
+                var days = {};
+                tripData.activities.forEach(function(act) {
+                    if (!days[act.date]) days[act.date] = [];
+                    days[act.date].push(act);
+                });
+                Object.keys(days).sort().forEach(function(date) {
+                    var dayDiv = document.createElement('div');
+                    var parts = date.split('-');
+                    var dateStr = date;
+                    if(parts.length === 3) dateStr = parts[2] + '/' + parts[1]; 
+                    var htmlContent = '<h3 class="sticky-header text-lg font-bold text-blue-800 uppercase tracking-wide border-b border-blue-100 mb-4 bg-[#f8f9fa]">' + dateStr + '</h3>' +
+                        '<div class="bg-white rounded-2xl card-shadow overflow-hidden">';
+                    days[date].forEach(function(act) {
+                        if (act.type === 'travel' && act.flightNumber) { 
+                            var flightTime = act.time;
+                            var boardingTime = subtractTime(flightTime, 40); 
+                            var arrivalAirportTime = subtractTime(flightTime, 120); 
+                            var duration = act.flightDurationMinutes || 120; 
+                            var landingTime = addTime(flightTime, duration);
+                            var transferTime = addTime(landingTime, 30);
+                            var transferDest = tripData.accommodation || 'Acomodação/Hotel';
+                            if (tripData.origin && act.destinationAirport) {
+                                if (act.date === tripData.returnDate) transferDest = "Casa / Origem";
+                                var transferAct = tripData.activities.find(a => a.date === act.date && a.description.startsWith("Transfer Aeroporto") && a.time === transferTime);
+                                if (transferAct) {
+                                    transferDest = transferAct.location.split('para ')[1] || transferDest;
+                                }
+                            }
+                            htmlContent += '<details class="group">' +
+                                '<summary class="p-4 border-b border-gray-50 hover:bg-blue-50 transition last:border-0 list-none">' +
+                                '<div class="itinerary-grid">' +
+                                '<div class="font-bold text-gray-700">' + act.time + '</div>' +
+                                '<div class="text-xs font-bold text-blue-600 bg-blue-100 px-2 py-1 rounded-full text-center self-center w-full truncate">' + (act.person || 'Todos') + '</div>' +
+                                '<div>' +
+                                '<div class="flex items-center justify-between">' +
+                                '<span class="font-bold text-blue-600"><i class="fas fa-plane-departure mr-2"></i>Decolagem ' + (act.airline || '') + ' ' + (act.flightNumber || '') + '</span>' +
+                                '<i class="fas fa-chevron-down text-gray-400 group-open:rotate-180 transition"></i>' +
+                                '</div>' +
+                                '<div class="text-xs text-gray-500 mt-1">' +
+                                '<span>' + (act.originAirport || 'Origem') + '</span> <i class="fas fa-long-arrow-alt-right"></i> <span>' + (act.destinationAirport || 'Destino') + '</span>' +
+                                '</div>' +
+                                '</div>' +
+                                '</div>' +
+                                '</summary>' +
+                                '<div class="bg-blue-50/50 p-4 text-sm text-gray-600 border-b border-blue-100">' +
+                                '<div class="timeline-container">' +
+                                '<div class="flight-event"><div class="flight-dot"></div><div class="font-bold text-gray-700">' + arrivalAirportTime + '</div><div>Chegada no aeroporto, bagagens e check-in.</div></div>' +
+                                '<div class="flight-event"><div class="flight-dot"></div><div class="font-bold text-gray-700">' + boardingTime + '</div><div>Embarque no portão.</div></div>' +
+                                '<div class="flight-event"><div class="flight-dot active"></div><div class="font-bold text-blue-700">' + act.time + '</div><div>Decolagem.</div></div>' +
+                                '<div class="flight-event"><div class="flight-dot"></div><div class="font-bold text-gray-700">' + landingTime + '</div><div>Desembarque e bagagens.</div></div>' +
+                                '<div class="flight-event"><div class="flight-dot"></div><div class="font-bold text-gray-700">' + transferTime + '</div><div>Transfer para: <strong>' + transferDest + '</strong></div></div>' +
+                                '</div>' +
+                                '</div>' +
+                                '</details>';
+                        } else {
+                            var locationHtml = '';
+                            if (act.location) {
+                                var mapQuery = encodeURIComponent(act.location);
+                                var isRoute = act.type === 'travel' || act.description.toLowerCase().includes('deslocamento');
+                                var urlMap = isRoute ? 'https://www.google.com/maps/dir/?api=1&destination=' + mapQuery : 'https://www.google.com/maps/search/?api=1&query=' + mapQuery;
+                                locationHtml = '<a href="' + urlMap + '" target="_blank" class="map-link">' + act.location + '</a>';
+                            }
+                            htmlContent += '<div class="itinerary-grid hover:bg-gray-50 border-b border-gray-50 last:border-0">' +
+                                '<div class="font-bold text-gray-700 pt-1">' + (act.time || '--:--') + '</div>' +
+                                '<div class="text-center"><span class="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-full inline-block w-full truncate">' + (act.person || 'Todos') + '</span></div>' +
+                                '<div>' +
+                                '<div class="flex items-start">' +
+                                '<div class="mr-3 mt-1">' + getIcon(act.type) + '</div>' +
+                                '<div>' +
+                                '<span class="font-semibold text-gray-800 text-lg block leading-tight">' + act.description + '</span>' +
+                                (locationHtml ? '<span class="text-sm font-medium block mt-1">' + locationHtml + '</span>' : '') +
+                                (act.transport ? '<span class="text-xs text-gray-400 ml-2 bg-gray-100 px-2 py-0.5 rounded"><i class="fas fa-car mr-1"></i>' + act.transport + '</span>' : '') +
+                                '</div>' +
+                                '</div>' +
+                                '</div>' +
+                                '</div>';
+                        }
+                    });
+                    htmlContent += '</div>';
+                    dayDiv.innerHTML = htmlContent;
+                    container.appendChild(dayDiv);
+                });
+            }
+        }
+        function getIcon(type) { var map = { 'travel': '<i class="fas fa-plane text-blue-500 text-xl"></i>', 'meal': '<i class="fas fa-utensils text-orange-500 text-xl"></i>', 'leisure': '<i class="fas fa-camera text-green-500 text-xl"></i>', 'commitment': '<i class="fas fa-briefcase text-purple-500 text-xl"></i>' }; return map[type] || '<i class="fas fa-circle text-gray-300 text-xs"></i>'; }
+
+        async function handleAdjustmentInput() {
+            var input = document.getElementById('adjustment-input');
+            var text = input.value;
+            if (!text.trim()) return;
+            showLoader('Ajustando com IA...');
+            var prompt = "Roteiro ATUAL: " + JSON.stringify(tripData.activities) + ". AJUSTE: \"" + text + "\". Mantenha JSON.";
+            try {
+                var result = await callGeminiSmart(prompt, null);
+                hideLoader();
+                if (result) { 
+                     if (typeof result === 'string') {
+                        try {
+                            var cleanResult = result.replace(/```json/g, "").replace(/```/g, "").trim();
+                            var parsed = JSON.parse(cleanResult);
+                            if(parsed.activities) tripData.activities = parsed.activities;
+                            else if(Array.isArray(parsed)) tripData.activities = parsed;
+                        } catch (e) { console.log("Erro parse ajuste", e); }
+                    }
+                    renderItinerary();
+                    input.value = ''; 
+                    alert('Atualizado!'); 
+                }
+            } catch (e) {
+                hideLoader();
+                // Erro tratado dentro da callGeminiSmart
+            }
+        }
+
+        function shareTrip() {
+            var jsonStr = encodeURIComponent(JSON.stringify(tripData));
+            var base64Data = btoa(jsonStr);
+            var finalShareUrl = `${SERVER_SHARE_URL}?title=${encodeURIComponent(tripData.tripObjective)}&dest=${encodeURIComponent(tripData.destination)}&date=${encodeURIComponent(tripData.startDate)}&img=${encodeURIComponent(destinationImageUrl)}&data=${base64Data}`;
+            var text = `*${tripData.tripObjective || "Minha Viagem"}* ✈️\n\n🗓️ ${tripData.startDate} a ${tripData.returnDate}\n📍 ${tripData.destination}\n\n👇 *Toque no cartão abaixo para ver o roteiro completo:*\n${finalShareUrl}`;
+            window.open("https://api.whatsapp.com/send?text=" + encodeURIComponent(text));
+        }
+
+        function downloadPDF() {
+            var { jsPDF } = window.jspdf;
+            var element = document.getElementById('itinerary-view');
+            var buttons = document.getElementById('trip-footer');
+            if(buttons) buttons.classList.add('hidden');
+            html2canvas(element, { scale: 2 }).then(function(canvas) {
+                var imgData = canvas.toDataURL('image/png');
+                var pdf = new jsPDF('p', 'mm', 'a4');
+                var pdfWidth = pdf.internal.pageSize.getWidth();
+                var pdfHeight = pdf.internal.pageSize.getHeight();
+                var margin = 10;
+                var contentWidth = pdfWidth - (margin * 2);
+                var contentHeight = (canvas.height * contentWidth) / canvas.width;
+                var position = 0; 
+                var heightLeft = contentHeight; 
+                var pageHeightMM = pdfHeight - (margin * 2);
+                pdf.addImage(imgData, 'PNG', margin, margin + position, contentWidth, contentHeight);
+                heightLeft -= pageHeightMM;
+                while (heightLeft > 0) {
+                    position = heightLeft - contentHeight; 
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'PNG', margin, margin + position, contentWidth, contentHeight);
+                    heightLeft -= pageHeightMM;
+                }
+                pdf.save("roteiro.pdf");
+                if(buttons) buttons.classList.remove('hidden');
+            }).catch(function(err) {
+                 console.error(err);
+                 alert("Erro ao gerar PDF.");
+                 if(buttons) buttons.classList.remove('hidden');
+            });
+        }
+        
+        window.handleInitialInput = handleInitialInput;
+    </script>
+</body>
+</html>
