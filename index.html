@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ddripp - Digital Roadbook (V35 Hybrid)</title>
+    <title>ddripp - Digital Roadbook (V36 Clean)</title>
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✈️</text></svg>">
 
@@ -14,6 +14,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 
     <script>
+        // Uso 'var' para evitar erros se recarregar scripts
         var k1 = "AIzaSyCVipGZZc7Pd2d2cjg";
         var k2 = "_90RKXfzPC2vS4jk";
         window.API_KEY_FINAL = k1 + k2;
@@ -65,28 +66,32 @@
           window.vertexAI = vertexAI; 
           window.getGenerativeModel = getGenerativeModel;
 
-          // Função Híbrida V35: Tenta Vertex Fine-Tuned -> Se falhar, tenta REST API (Gemini 2.0)
+          // Função Híbrida V36: Correção de URL Dupla + Fallback Seguro
           window.callVertexAI = async function(modelName, promptText, schema) {
               
               // 1. TENTATIVA VERTEX AI (FINE-TUNED)
-              if (modelName && modelName.includes('projects/')) {
+              if (modelName) {
                   window.logToScreen(`Tentando Fine-Tuned (Vertex)...`, 'info');
                   try {
+                      // CORREÇÃO CRÍTICA: O SDK do Firebase as vezes duplica o caminho se passarmos 'projects/...'.
+                      // Trocamos para usar o 'model' direto se for ajustado.
                       const tunedModel = getGenerativeModel(vertexAI, { 
                           model: modelName,
                           generationConfig: { responseMimeType: "application/json", responseSchema: schema }
                       });
+                      
                       const result = await tunedModel.generateContent(promptText);
                       window.logToScreen("SUCESSO: Fine-Tuned respondeu!", 'success');
                       return JSON.parse(result.response.text());
                   } catch (error) {
-                      window.logToScreen(`Vertex AI falhou (${error.message}). Ativando protocolo de emergência...`, 'warning');
+                      window.logToScreen(`Vertex AI falhou (${error.message}). Tentando Fallback...`, 'warning');
+                      // Se falhar por erro de URL (404/400), o fallback salva.
                   }
               }
 
-              // 2. TENTATIVA REST API (GOOGLE AI STUDIO - FALLBACK)
-              // Atualizado para usar Gemini 2.0 Flash (Vigente Dez/2025)
-              const fallbackModel = "gemini-2.0-flash";
+              // 2. TENTATIVA REST API (FALLBACK SEGURO - GEMINI 1.5)
+              // Usamos o 1.5 Flash pois é o mais estável publicamente hoje.
+              const fallbackModel = "gemini-1.5-flash";
               window.logToScreen(`Usando Fallback REST API (${fallbackModel})...`, 'info');
               
               try {
@@ -116,16 +121,15 @@
                   return JSON.parse(text);
 
               } catch (err) {
-                  window.logToScreen(`Falha REST: ${err.message}`, 'error');
-                  // Se der erro 403, avisa especificamente sobre a chave
+                  window.logToScreen(`ERRO FINAL: ${err.message}`, 'error');
                   if(err.message.includes("403")) {
-                       alert("Acesso Negado (403): Verifique nas Credenciais do Google Cloud se a chave está sem restrições de IP/HTTP.");
+                       alert("Acesso Negado (403): Verifique se a chave de API está sem restrições de IP no Google Cloud.");
                   }
                   throw err;
               }
           };
           
-          window.logToScreen("Sistema V35 (Hybrid Fallback) Pronto.", 'success');
+          window.logToScreen("Sistema V36 (Clean & Fix) Pronto.", 'success');
       } catch (e) {
           window.logToScreen(`Erro Init: ${e.message}`, 'error');
       }
@@ -179,7 +183,7 @@
         <div id="initial-view" class="flex flex-col items-center justify-center min-h-[60vh]">
              <header class="text-center mb-8">
                 <h1 class="text-6xl font-bold text-gray-800 tracking-tighter">ddripp</h1>
-                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V35 (Hybrid)</p>
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V36 (Clean & Fix)</p>
             </header>
             
             <div class="bg-white p-8 rounded-2xl card-shadow w-full relative max-w-2xl">
@@ -259,7 +263,7 @@
 
     <div id="debug-console-container" class="fixed bottom-0 left-0 w-full bg-gray-900 border-t-4 border-gray-800 z-50 h-32 no-print transition-all duration-300 translate-y-28 hover:translate-y-0 opacity-80 hover:opacity-100">
         <div class="flex justify-between items-center bg-gray-800 px-4 py-1 cursor-pointer" onclick="document.getElementById('debug-console-container').classList.toggle('translate-y-28')">
-            <span class="text-xs text-gray-400 font-bold uppercase">Status do Sistema (V35)</span>
+            <span class="text-xs text-gray-400 font-bold uppercase">Status do Sistema (V36)</span>
             <span class="text-gray-400 text-xs">▲ Logs</span>
         </div>
         <div id="debug-console" class="p-2 h-24 overflow-y-auto text-xs text-gray-300 font-mono">
@@ -284,8 +288,10 @@
         // CONFIGURAÇÃO
         // =================================================================
         
-        // MANTIDO: Configuração do Modelo Fine-Tuned (Projeto ddripp2)
-        var TUNED_MODEL_NAME = "projects/246188888920/locations/us-central1/models/980279487348342784@1";
+        // CORREÇÃO CRÍTICA DE URL:
+        // Usamos o formato "tunedModels/ID" para evitar que o SDK duplique o caminho do projeto.
+        // O ID "980279487348342784" vem do seu print do Vertex AI.
+        var TUNED_MODEL_NAME = "tunedModels/980279487348342784";
         
         var SERVER_SHARE_URL = "https://ddripp-server.onrender.com/share"; 
         
@@ -358,7 +364,7 @@
         // --- FUNÇÃO INTELIGENTE PRINCIPAL (ATUALIZADA) ---
         async function callGeminiSmart(promptText, schema) {
             if (window.callVertexAI) {
-                // Chama a função definida no <head> que tenta Fine-Tuned -> depois Fallback 2.0
+                // Chama a função definida no <head>
                 return await window.callVertexAI(TUNED_MODEL_NAME, promptText, schema);
             } else {
                 throw new Error("Sistema de IA não inicializado.");
