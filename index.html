@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ddripp - Digital Roadbook (V38 Power Models)</title>
+    <title>ddripp - Digital Roadbook (V39 Final Gemini 2.5)</title>
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✈️</text></svg>">
 
@@ -14,8 +14,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 
     <script>
-        var k1 = "AIzaSyA9wFITzUsGHwjmf";
-        var k2 = "LO615E66sqCq9XYzZI";
+        // Chave nova fornecida pelo usuário (AIzaSyA9...)
+        var k1 = "AIzaSyA9wFITzUsGHwj";
+        var k2 = "mfLO615E66sqCq9XYzZI";
         window.API_KEY_FINAL = k1 + k2;
     </script>
 
@@ -46,24 +47,17 @@
       try {
           const app = initializeApp(firebaseConfig);
           const hostname = window.location.hostname;
-          const isProduction = hostname.includes('github.io') || hostname.includes('firebaseapp.com') || hostname.includes('ddripp');
+          const isProduction = hostname.includes('github.io') || hostname.includes('firebaseapp.com');
           
           if (isProduction) {
-              try { 
-                  const analytics = getAnalytics(app);
-                  console.log("Analytics iniciado.");
-              } catch(errAnalytics) { 
-                  console.warn("Analytics ignorado.");
-              }
+              try { const analytics = getAnalytics(app); } catch(e) {}
           } else {
-              window.logToScreen("Modo Preview: Analytics desativado.", 'info');
+              window.logToScreen("Modo Preview.", 'info');
           }
 
           const vertexAI = getVertexAI(app, { location: "us-central1" });
-          window.vertexAI = vertexAI; 
-          window.getGenerativeModel = getGenerativeModel;
-
-          // --- FUNÇÃO HÍBRIDA V38 (POWER LIST MODELS) ---
+          
+          // --- FUNÇÃO HÍBRIDA V39 (MODELOS ATUALIZADOS 2025) ---
           window.callVertexAI = async function(modelName, promptText, schema) {
               
               // 1. TENTATIVA VERTEX AI (FINE-TUNED)
@@ -71,23 +65,23 @@
                   window.logToScreen(`Tentando Fine-Tuned (Vertex)...`, 'info');
                   try {
                       const tunedModel = getGenerativeModel(vertexAI, { 
-                          model: modelName,
+                          model: modelName, 
                           generationConfig: { responseMimeType: "application/json", responseSchema: schema }
                       });
                       const result = await tunedModel.generateContent(promptText);
                       window.logToScreen("SUCESSO: Fine-Tuned respondeu!", 'success');
                       return JSON.parse(result.response.text());
                   } catch (error) {
-                      window.logToScreen(`Vertex AI bloqueado (CORS/Erro). Tentando Lista Oficial...`, 'warning');
+                      window.logToScreen(`Vertex bloqueado/falha. Ativando Fallback 2.5...`, 'warning');
                   }
               }
 
-              // 2. LISTA DE MODELOS OFICIAIS (FALLBACK CASCADE)
-              // Tentamos do mais novo para o mais antigo garantido
+              // 2. LISTA DE MODELOS REAIS (Dez 2025)
+              // Prioridade: O mais novo e rápido (2.5 Flash) -> O mais estável (2.0 Flash) -> O mais capaz (2.5 Pro)
               const modelsToTry = [
-                  "gemini-2.5-flash", // O mais rápido e moderno da sua lista
-                  "gemini-2.0-flash", // O backup robusto
-                  "gemini-2.5-pro"    // Poderoso (caso os flash falhem)
+                  "gemini-2.5-flash", 
+                  "gemini-2.0-flash", 
+                  "gemini-2.5-pro"
               ];
 
               for (const model of modelsToTry) {
@@ -109,9 +103,14 @@
                       });
 
                       if (!response.ok) {
-                          const errorData = await response.json();
-                          const errorMsg = errorData.error?.message || response.statusText;
-                          throw new Error(errorMsg);
+                          const errData = await response.json();
+                          const errMsg = errData.error?.message || response.statusText;
+                          // Se o modelo não existe (404), tenta o próximo da lista
+                          if(errMsg.includes("404") || errMsg.includes("not found")) {
+                              window.logToScreen(`Modelo ${model} não encontrado. Tentando próximo...`, 'warning');
+                              continue; 
+                          }
+                          throw new Error(errMsg);
                       }
                       
                       const data = await response.json();
@@ -121,18 +120,15 @@
 
                   } catch (err) {
                       window.logToScreen(`Falha em ${model}: ${err.message}`, 'warning');
-                      // Se falhar, o loop continua para o próximo modelo da lista
                   }
               }
 
-              // Se chegar aqui, nenhum modelo da lista funcionou
               const msgFinal = "Falha crítica: Nenhum modelo da lista oficial respondeu.";
-              window.logToScreen(msgFinal, 'error');
-              alert(msgFinal + "\nVerifique se a 'Generative Language API' está ativa e a chave sem restrições.");
+              alert(msgFinal + "\nVerifique sua conexão ou a chave de API.");
               throw new Error(msgFinal);
           };
           
-          window.logToScreen("Sistema V38 (Modelos Reais) Pronto.", 'success');
+          window.logToScreen("Sistema V39 (Gemini 2.5 Ready) Pronto.", 'success');
       } catch (e) {
           window.logToScreen(`Erro Init: ${e.message}`, 'error');
       }
@@ -186,7 +182,7 @@
         <div id="initial-view" class="flex flex-col items-center justify-center min-h-[60vh]">
              <header class="text-center mb-8">
                 <h1 class="text-6xl font-bold text-gray-800 tracking-tighter">ddripp</h1>
-                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V38 (Power Models)</p>
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V39 (2.5 Flash)</p>
             </header>
             
             <div class="bg-white p-8 rounded-2xl card-shadow w-full relative max-w-2xl">
@@ -266,7 +262,7 @@
 
     <div id="debug-console-container" class="fixed bottom-0 left-0 w-full bg-gray-900 border-t-4 border-gray-800 z-50 h-32 no-print transition-all duration-300 translate-y-28 hover:translate-y-0 opacity-80 hover:opacity-100">
         <div class="flex justify-between items-center bg-gray-800 px-4 py-1 cursor-pointer" onclick="document.getElementById('debug-console-container').classList.toggle('translate-y-28')">
-            <span class="text-xs text-gray-400 font-bold uppercase">Status do Sistema (V38)</span>
+            <span class="text-xs text-gray-400 font-bold uppercase">Status do Sistema (V39)</span>
             <span class="text-gray-400 text-xs">▲ Logs</span>
         </div>
         <div id="debug-console" class="p-2 h-24 overflow-y-auto text-xs text-gray-300 font-mono">
@@ -291,7 +287,9 @@
         // CONFIGURAÇÃO
         // =================================================================
         
-        // Caminho relativo para evitar duplicação no SDK (Obrigatório para Firebase Vertex)
+        // CORREÇÃO CRÍTICA DO CAMINHO:
+        // Usamos "tunedModels/{ID}" para que o Firebase SDK não duplique o projeto.
+        // O ID "980279487348342784" vem do seu print do Vertex AI.
         var TUNED_MODEL_NAME = "tunedModels/980279487348342784";
         
         var SERVER_SHARE_URL = "https://ddripp-server.onrender.com/share"; 
@@ -526,7 +524,7 @@
             var inputEl = document.getElementById('initial-input');
             var inputVal = inputEl.value;
             if ((!inputVal || inputVal.trim() === "") && selectedFiles.length === 0) return alert('Por favor, diga algo ou anexe um arquivo.');
-            showLoader('Conectando ao Cérebro ddripp...');
+            showLoader('Conectando ao Cérebro ddripp (Vertex AI)...');
             var today = new Date().toLocaleDateString('pt-BR');
             var schemaStructure = {
                 type: "OBJECT",
@@ -611,7 +609,7 @@
                 }
             } catch (e) {
                 hideLoader();
-                // Erro já tratado no nível anterior
+                alert("Erro ao processar: " + e.message);
             }
         };
 
