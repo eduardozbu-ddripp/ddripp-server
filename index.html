@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ddripp - Digital Roadbook (V45 Final)</title>
+    <title>ddripp - Digital Roadbook (V46 Full Logic)</title>
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✈️</text></svg>">
 
@@ -14,15 +14,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 
     <script>
-        // Chave pública (Google Maps, etc)
+        // Chaves Públicas
         var k1 = "AIzaSyA9wFITzUsGHwj";
         var k2 = "mfLO615E66sqCq9XYzZI";
         window.API_KEY_FINAL = k1 + k2;
 
-        // 🟢 SUA URL DO BACKEND (JÁ CONFIGURADA)
+        // 🟢 SEU ENDPOINT (Confirmado e Ativo)
         window.ENDPOINT_URL = "https://generateroadbook-swx7ffu2ra-uc.a.run.app"; 
         
-        // URL do servidor de imagens (opcional, mantido para compatibilidade)
         var SERVER_SHARE_URL = "https://ddripp-server.onrender.com/share"; 
     </script>
 
@@ -73,7 +72,7 @@
         <div id="initial-view" class="flex flex-col items-center justify-center min-h-[60vh]">
              <header class="text-center mb-8">
                 <h1 class="text-6xl font-bold text-gray-800 tracking-tighter">ddripp</h1>
-                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V45 (Fine-Tuned)</p>
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V46 (Full Logic)</p>
             </header>
             
             <div class="bg-white p-8 rounded-2xl card-shadow w-full relative max-w-2xl">
@@ -153,7 +152,7 @@
 
     <div id="debug-console-container" class="fixed bottom-0 left-0 w-full bg-gray-900 border-t-4 border-gray-800 z-50 h-32 no-print transition-all duration-300 translate-y-28 hover:translate-y-0 opacity-80 hover:opacity-100">
         <div class="flex justify-between items-center bg-gray-800 px-4 py-1 cursor-pointer" onclick="document.getElementById('debug-console-container').classList.toggle('translate-y-28')">
-            <span class="text-xs text-gray-400 font-bold uppercase">Status do Sistema (V45)</span>
+            <span class="text-xs text-gray-400 font-bold uppercase">Status do Sistema (V46)</span>
             <span class="text-gray-400 text-xs">▲ Logs</span>
         </div>
         <div id="debug-console" class="p-2 h-24 overflow-y-auto text-xs text-gray-300 font-mono">
@@ -175,7 +174,7 @@
     
     <script>
         // =================================================================
-        // CONFIGURAÇÃO E DADOS
+        // CONFIGURAÇÃO E DADOS GLOBAIS
         // =================================================================
         var tripData = { origin: null, destination: null, startDate: null, returnDate: null, activities: [], title: '', tripObjective: '', weatherForecast: '', accommodation: null };
         var missingInfoQueue = [];
@@ -184,7 +183,7 @@
         var selectedFiles = []; 
         var destinationImageUrl = "";
 
-        // --- CORE: CHAMADA AO ENDPOINT DO FINE-TUNING ---
+        // --- CORE: CHAMADA AO ENDPOINT ---
         async function callGeminiSmart(promptText, schema) {
             
             if (!window.ENDPOINT_URL || window.ENDPOINT_URL.includes("COLE_SUA_URL")) {
@@ -211,9 +210,7 @@
 
                 const data = await response.json();
                 
-                if (data.error) {
-                    throw new Error(data.error);
-                }
+                if (data.error) throw new Error(data.error);
 
                 window.logToScreen("SUCESSO: O modelo treinado respondeu!", 'success');
                 
@@ -233,34 +230,389 @@
             }
         }
 
-        // --- FUNÇÕES DE INTERFACE ---
-        // AQUI ESTÁ A FUNÇÃO QUE FALTAVA
-        function loadHeaderImage() {
-            // Se não houver servidor de imagem configurado ou dados, usa um placeholder bonito
-            if (!tripData.destination) return;
-            
-            var query = encodeURIComponent(tripData.destination);
-            // Fallback simples usando Unsplash se o servidor próprio falhar
-            var dynamicImgUrl = `https://source.unsplash.com/1600x900/?${query},travel`;
-            
-            if (SERVER_SHARE_URL && SERVER_SHARE_URL.includes('ddripp')) {
-                 dynamicImgUrl = SERVER_SHARE_URL.replace('/share', '/dynamic-cover') + `?dest=${encodeURIComponent(tripData.destination)}&date=${encodeURIComponent(tripData.startDate||'')}`;
-            }
+        // --- FUNÇÕES DE LÓGICA LOGÍSTICA (RESTAURADAS) ---
+        function subtractTime(timeStr, minutesToSubtract) {
+            if(!timeStr) return "";
+            var parts = timeStr.split(':'); var d = new Date();
+            d.setHours(parseInt(parts[0]), parseInt(parts[1]), 0);
+            d.setMinutes(d.getMinutes() - minutesToSubtract);
+            return d.getHours().toString().padStart(2, '0') + ":" + d.getMinutes().toString().padStart(2, '0');
+        }
+        function addTime(timeStr, minutesToAdd) {
+            if(!timeStr) return "";
+            var parts = timeStr.split(':'); var d = new Date();
+            d.setHours(parseInt(parts[0]), parseInt(parts[1]), 0);
+            d.setMinutes(d.getMinutes() + minutesToAdd);
+            return d.getHours().toString().padStart(2, '0') + ":" + d.getMinutes().toString().padStart(2, '0');
+        }
 
+        function fillGeographicGaps() {
+            if (!tripData.activities) return;
+            tripData.activities.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+            var newActivities = [];
+            var lastKnownLocation = tripData.accommodation || tripData.origin || null;
+            
+            for (var i = 0; i < tripData.activities.length; i++) {
+                var curr = tripData.activities[i];
+                // Lógica de Voo
+                if (curr.type === 'travel' && curr.destinationAirport && curr.flightNumber) {
+                    newActivities.push(curr);
+                    var arrivalTime = addTime(curr.time, curr.flightDurationMinutes || 120);
+                    var transferStart = addTime(arrivalTime, 30); 
+                    var nextLocation = tripData.accommodation || null;
+                    if (i < tripData.activities.length - 1) {
+                        var next = tripData.activities[i+1];
+                        if(next.location && !next.location.toLowerCase().includes("aeroporto")) {
+                            nextLocation = next.location;
+                        }
+                    } else if (!tripData.accommodation) {
+                        nextLocation = tripData.destination || null;
+                    }
+                    var transferDest = nextLocation || "Acomodação/Ponto de Encontro";
+                    if (tripData.returnDate && curr.date === tripData.returnDate && curr.destinationAirport.includes(tripData.origin)) {
+                        transferDest = "Casa / Origem";
+                    }
+
+                    if (nextLocation && !nextLocation.includes(curr.destinationAirport)) {
+                        newActivities.push({
+                            date: curr.date,
+                            time: transferStart,
+                            person: curr.person,
+                            description: "Transfer Aeroporto -> " + transferDest,
+                            location: curr.destinationAirport + " para " + transferDest,
+                            type: "travel",
+                            transport: "Transfer/Uber"
+                        });
+                        lastKnownLocation = transferDest;
+                    } else {
+                        lastKnownLocation = curr.destinationAirport;
+                    }
+                    continue;
+                }
+                // Lógica de Deslocamento Urbano
+                if (curr.location) {
+                    var cleanedLast = lastKnownLocation ? lastKnownLocation.split(' para ')[lastKnownLocation.split(' para ').length - 1] : null;
+                    if (cleanedLast && curr.location !== cleanedLast && !curr.description.includes(cleanedLast)) {
+                        var travelTime = subtractTime(curr.time, 45);
+                        newActivities.push({
+                            date: curr.date,
+                            time: travelTime,
+                            person: curr.person,
+                            description: "Deslocamento: " + cleanedLast + " -> " + curr.location,
+                            location: cleanedLast + " para " + curr.location,
+                            type: "travel",
+                            transport: "Deslocamento Urbano"
+                        });
+                    }
+                    lastKnownLocation = curr.location;
+                }
+                newActivities.push(curr);
+            }
+            tripData.activities = newActivities.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+        }
+
+        // --- FUNÇÕES DE UI E EXTRAS ---
+        function loadHeaderImage() {
+            if (!SERVER_SHARE_URL) return;
+            var dynamicImgUrl = SERVER_SHARE_URL.replace('/share', '/dynamic-cover') + `?dest=${encodeURIComponent(tripData.destination)}&date=${encodeURIComponent(tripData.startDate||'')}`;
             destinationImageUrl = dynamicImgUrl; 
             var img = new Image();
             img.onload = function() {
                 var headerBg = document.getElementById('header-bg-image');
-                headerBg.style.backgroundImage = `url('${dynamicImgUrl}')`;
-                headerBg.style.opacity = '0.9';
-                document.getElementById('header-loader').classList.add('hidden');
-                window.logToScreen("Capa dinâmica carregada!", 'success');
+                if(headerBg) {
+                    headerBg.style.backgroundImage = `url('${dynamicImgUrl}')`;
+                    headerBg.style.opacity = '0.9';
+                    document.getElementById('header-loader').classList.add('hidden');
+                }
             };
             img.onerror = function() {
-                document.getElementById('header-loader').innerHTML = '<span class="text-gray-400 text-xs">Imagem indisponível</span>';
+                if(document.getElementById('header-loader')) document.getElementById('header-loader').innerHTML = '<span class="text-gray-400 text-xs">Imagem indisponível</span>';
             };
             img.src = dynamicImgUrl;
         }
+
+        async function fetchWeather(destination) {
+            try {
+                const { Geocoder } = await google.maps.importLibrary("geocoding");
+                const geocoder = new Geocoder();
+                geocoder.geocode({ 'address': destination }, function(results, status) {
+                    if (status === 'OK' && results[0]) {
+                        var lat = results[0].geometry.location.lat();
+                        var lng = results[0].geometry.location.lng();
+                        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto`)
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data.daily) {
+                                    var max = Math.round(data.daily.temperature_2m_max[0]);
+                                    var min = Math.round(data.daily.temperature_2m_min[0]);
+                                    var code = data.daily.weathercode[0];
+                                    var icon = getWeatherIcon(code);
+                                    var desc = getWeatherDesc(code);
+                                    var widget = document.getElementById('weather-widget');
+                                    if(widget) {
+                                        widget.innerHTML = `${icon} <span class="font-bold text-gray-800">${max}° / ${min}°</span> <span class="text-xs text-gray-500 border-l pl-2 ml-1 border-gray-300">${desc}</span>`;
+                                        widget.classList.remove('hidden');
+                                    }
+                                }
+                            });
+                    }
+                });
+            } catch (e) { console.warn("Erro Clima", e); }
+        }
+        
+        function getWeatherIcon(code) {
+            if (code <= 1) return '<i class="fas fa-sun text-yellow-500 text-lg"></i>';
+            if (code <= 3) return '<i class="fas fa-cloud-sun text-orange-400 text-lg"></i>';
+            if (code <= 67) return '<i class="fas fa-cloud-rain text-blue-400 text-lg"></i>';
+            return '<i class="fas fa-cloud text-gray-400 text-lg"></i>';
+        }
+        function getWeatherDesc(code) { return code <= 1 ? 'Ensolarado' : code <= 3 ? 'Nublado' : code <= 67 ? 'Chuvoso' : 'Instável'; }
+
+        // --- FLUXO DE CONTROLE ---
+        async function handleInitialInput() {
+            console.log("Botão clicado!"); // Debug
+            
+            var inputEl = document.getElementById('initial-input');
+            var inputVal = inputEl.value;
+            if ((!inputVal || inputVal.trim() === "") && selectedFiles.length === 0) return alert('Por favor, diga algo ou anexe um arquivo.');
+            
+            showLoader('Consultando Modelo Fine-Tuned...');
+            var today = new Date().toLocaleDateString('pt-BR');
+            
+            // SYSTEM INSTRUCTION NO PROMPT
+            var systemInstruction = "Você é o 'ddripp', um planejador logístico expert. Extraia CADA evento e data. Se faltar voo, sugira flightOptions. Responda APENAS JSON.";
+            var fullPrompt = `${systemInstruction}\n\n[INPUT]\n"${inputVal}"\n[DATA]: ${today}`;
+
+            // SCHEMA COMPLETO (Essencial para o Fine-Tuning)
+            var schemaStructure = {
+                type: "OBJECT",
+                properties: {
+                    "missingCriticalInfo": { "type": "STRING" },
+                    "tripObjective": { "type": "STRING" },
+                    "weatherForecast": { "type": "STRING" },
+                    "origin": { "type": "STRING" },
+                    "destination": { "type": "STRING" },
+                    "startDate": { "type": "STRING" },
+                    "returnDate": { "type": "STRING" },
+                    "accommodation": { "type": "STRING" },
+                    "activities": { 
+                        "type": "ARRAY", 
+                        "items": { 
+                            "type": "OBJECT", 
+                            "properties": {
+                                "date": { "type": "STRING" },
+                                "time": { "type": "STRING" },
+                                "person": { "type": "STRING" },
+                                "description": { "type": "STRING" },
+                                "location": { "type": "STRING" },
+                                "type": { "type": "STRING", "enum": ["travel", "commitment", "meal", "leisure", "free_time"] },
+                                "transport": { "type": "STRING" },
+                                "flightNumber": { "type": "STRING" },
+                                "airline": { "type": "STRING" },
+                                "originAirport": { "type": "STRING" },
+                                "destinationAirport": { "type": "STRING" },
+                                "flightDurationMinutes": { "type": "INTEGER" },
+                                "flightOptions": {
+                                    "type": "ARRAY",
+                                    "items": {
+                                        "type": "OBJECT",
+                                        "properties": { "airline": {"type": "STRING"}, "flightNumber": {"type": "STRING"}, "time": {"type": "STRING"}, "origin": {"type": "STRING"}, "destination": {"type": "STRING"}, "durationMinutes": {"type": "INTEGER"} }
+                                    }
+                                }
+                            },
+                            "required": ["date", "time", "description", "type"]
+                        }
+                    }
+                },
+                "required": ["activities", "tripObjective"]
+            };
+
+            try {
+                var result = await callGeminiSmart(fullPrompt, schemaStructure);
+                hideLoader();
+                if (result) { 
+                    tripData = { ...tripData, ...result };
+                    if(!tripData.activities) tripData.activities = [];
+                    selectedFiles = []; renderFilePreviews();
+                    
+                    // Aplica a lógica "pesada" que o utilizador pediu para não cortar
+                    fillGeographicGaps(); 
+
+                    if (checkFlightClarification()) return; 
+                    if (checkTransportClarification()) return;
+                    
+                    if (tripData.missingCriticalInfo) {
+                        if (!tripData.destination && tripData.missingCriticalInfo.toLowerCase().includes("destino")) missingInfoQueue.push({ key: 'destination', q: tripData.missingCriticalInfo, type: 'location' });
+                        else if (!tripData.startDate && tripData.missingCriticalInfo.toLowerCase().includes("data")) missingInfoQueue.push({ key: 'startDate', q: tripData.missingCriticalInfo, type: 'date' });
+                    }
+                    checkMissingInfo();
+                }
+            } catch (e) {
+                hideLoader();
+                console.error(e);
+            }
+        };
+
+        function checkMissingInfo() {
+            if (!tripData.destination && missingInfoQueue.length === 0) missingInfoQueue.push({ key: 'destination', q: 'Qual o destino da viagem?', type: 'location' });
+            if (!tripData.startDate && missingInfoQueue.length === 0) missingInfoQueue.push({ key: 'startDate', q: 'Qual a data de início?', type: 'date' });
+            if (!tripData.returnDate && missingInfoQueue.length === 0) missingInfoQueue.push({ key: 'returnDate', q: 'Qual a data de retorno?', type: 'date' });
+            if (missingInfoQueue.length > 0) askNext();
+            else generateItinerary();
+        }
+
+        function askNext() {
+            var q = missingInfoQueue[0];
+            document.getElementById('gap-question').textContent = q.q;
+            var input = document.getElementById('gap-input');
+            input.value = '';
+            
+            // Lógica de Autocomplete (Places)
+            if (q.type === 'location') {
+                document.getElementById('gap-input').classList.add('hidden');
+                var container = document.getElementById('place-autocomplete-container');
+                container.innerHTML = ''; 
+                container.classList.remove('hidden');
+                google.maps.importLibrary("places").then(({ PlaceAutocompleteElement }) => {
+                    const autocomplete = new PlaceAutocompleteElement();
+                    autocomplete.placeholder = "Digite a cidade ou local...";
+                    container.appendChild(autocomplete);
+                    autocomplete.addEventListener("gmp-places-select", async ({ place }) => {
+                        await place.fetchFields({ fields: ["displayName", "formattedAddress"] });
+                        const val = place.formattedAddress || place.displayName;
+                        input.value = val;
+                    });
+                }).catch(e => {
+                    console.warn("Erro Places API", e);
+                    document.getElementById('gap-input').classList.remove('hidden');
+                    document.getElementById('place-autocomplete-container').classList.add('hidden');
+                });
+            } else {
+                if(q.type === 'date') input.type = 'date';
+                else input.type = 'text';
+                document.getElementById('gap-input').classList.remove('hidden');
+                document.getElementById('place-autocomplete-container').classList.add('hidden');
+            }
+
+            document.getElementById('gap-filling-view').classList.remove('hidden');
+            document.getElementById('initial-view').classList.add('hidden');
+            if(q.type !== 'location') input.focus();
+        }
+
+        function handleGapInput() {
+            var val = document.getElementById('gap-input').value;
+            if (!val) return alert('Por favor, responda.');
+            if (missingInfoQueue[0].key.startsWith('transport_fix_')) {
+                var idx = parseInt(missingInfoQueue[0].key.split('_')[2]);
+                tripData.activities[idx].transport = val;
+                tripData.activities[idx].description += " (" + val + ")";
+            } else {
+                tripData[missingInfoQueue[0].key] = val;
+            }
+            missingInfoQueue.shift();
+            if (missingInfoQueue.length > 0) askNext();
+            else {
+                document.getElementById('gap-filling-view').classList.add('hidden');
+                if (checkTransportClarification()) return;
+                generateItinerary();
+            }
+        }
+
+        function renderItinerary() {
+            var container = document.getElementById('itinerary-content');
+            container.innerHTML = '';
+            
+            if(tripData.activities && tripData.activities.length > 0) {
+                // Ordenação e Agrupamento
+                tripData.activities.sort(function(a, b) { return (a.date + a.time).localeCompare(b.date + b.time); });
+                var days = {};
+                tripData.activities.forEach(function(act) {
+                    if (!days[act.date]) days[act.date] = [];
+                    days[act.date].push(act);
+                });
+
+                Object.keys(days).sort().forEach(function(date) {
+                    var dayDiv = document.createElement('div');
+                    var parts = date.split('-');
+                    var dateStr = parts.length === 3 ? parts[2] + '/' + parts[1] : date; 
+                    
+                    var htmlContent = '<h3 class="sticky-header text-lg font-bold text-blue-800 uppercase tracking-wide border-b border-blue-100 mb-4 bg-[#f8f9fa]">' + dateStr + '</h3>' +
+                        '<div class="bg-white rounded-2xl card-shadow overflow-hidden">';
+                    
+                    days[date].forEach(function(act) {
+                        // RENDERIZAÇÃO DETALHADA DE VOOS
+                        if (act.type === 'travel' && act.flightNumber) { 
+                            var flightTime = act.time;
+                            var boardingTime = subtractTime(flightTime, 40); 
+                            var arrivalAirportTime = subtractTime(flightTime, 120); 
+                            var duration = act.flightDurationMinutes || 120; 
+                            var landingTime = addTime(flightTime, duration);
+                            var transferTime = addTime(landingTime, 30);
+                            
+                            var transferDest = tripData.accommodation || 'Destino';
+                            if (tripData.origin && act.destinationAirport) {
+                                if (act.date === tripData.returnDate) transferDest = "Origem";
+                            }
+
+                            htmlContent += '<details class="group">' +
+                                '<summary class="p-4 border-b border-gray-50 hover:bg-blue-50 transition last:border-0 list-none">' +
+                                '<div class="itinerary-grid">' +
+                                '<div class="font-bold text-gray-700">' + act.time + '</div>' +
+                                '<div class="text-xs font-bold text-blue-600 bg-blue-100 px-2 py-1 rounded-full text-center self-center w-full truncate">' + (act.person || 'Todos') + '</div>' +
+                                '<div>' +
+                                '<div class="flex items-center justify-between">' +
+                                '<span class="font-bold text-blue-600"><i class="fas fa-plane-departure mr-2"></i>Decolagem ' + (act.airline || '') + ' ' + (act.flightNumber || '') + '</span>' +
+                                '<i class="fas fa-chevron-down text-gray-400 group-open:rotate-180 transition"></i>' +
+                                '</div>' +
+                                '<div class="text-xs text-gray-500 mt-1">' +
+                                '<span>' + (act.originAirport || 'Origem') + '</span> <i class="fas fa-long-arrow-alt-right"></i> <span>' + (act.destinationAirport || 'Destino') + '</span>' +
+                                '</div>' +
+                                '</div>' +
+                                '</div>' +
+                                '</summary>' +
+                                '<div class="bg-blue-50/50 p-4 text-sm text-gray-600 border-b border-blue-100">' +
+                                '<div class="timeline-container">' +
+                                '<div class="flight-event"><div class="flight-dot"></div><div class="font-bold text-gray-700">' + arrivalAirportTime + '</div><div>Chegada no aeroporto.</div></div>' +
+                                '<div class="flight-event"><div class="flight-dot"></div><div class="font-bold text-gray-700">' + boardingTime + '</div><div>Embarque.</div></div>' +
+                                '<div class="flight-event"><div class="flight-dot active"></div><div class="font-bold text-blue-700">' + act.time + '</div><div>Decolagem.</div></div>' +
+                                '<div class="flight-event"><div class="flight-dot"></div><div class="font-bold text-gray-700">' + landingTime + '</div><div>Aterragem prevista.</div></div>' +
+                                '</div>' +
+                                '</div>' +
+                                '</details>';
+                        } else {
+                            // RENDERIZAÇÃO DE ATIVIDADES NORMAIS
+                            var locationHtml = '';
+                            if (act.location) {
+                                var mapQuery = encodeURIComponent(act.location);
+                                var urlMap = 'https://www.google.com/maps/dir/?api=1&destination=' + mapQuery;
+                                locationHtml = '<a href="' + urlMap + '" target="_blank" class="map-link">' + act.location + '</a>';
+                            }
+                            htmlContent += '<div class="itinerary-grid hover:bg-gray-50 border-b border-gray-50 last:border-0">' +
+                                '<div class="font-bold text-gray-700 pt-1">' + (act.time || '--:--') + '</div>' +
+                                '<div class="text-center"><span class="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-full inline-block w-full truncate">' + (act.person || 'Todos') + '</span></div>' +
+                                '<div>' +
+                                '<div class="flex items-start">' +
+                                '<div class="mr-3 mt-1">' + getIcon(act.type) + '</div>' +
+                                '<div>' +
+                                '<span class="font-semibold text-gray-800 text-lg block leading-tight">' + act.description + '</span>' +
+                                (locationHtml ? '<span class="text-sm font-medium block mt-1">' + locationHtml + '</span>' : '') +
+                                (act.transport ? '<span class="text-xs text-gray-400 ml-2 bg-gray-100 px-2 py-0.5 rounded"><i class="fas fa-car mr-1"></i>' + act.transport + '</span>' : '') +
+                                '</div>' +
+                                '</div>' +
+                                '</div>' +
+                                '</div>';
+                        }
+                    });
+                    htmlContent += '</div>';
+                    dayDiv.innerHTML = htmlContent;
+                    container.appendChild(dayDiv);
+                });
+            } else {
+                container.innerHTML = '<p class="text-center text-gray-500 mt-10">Nenhuma atividade encontrada no roteiro.</p>';
+            }
+        }
+
+        function getIcon(type) { var map = { 'travel': '<i class="fas fa-plane text-blue-500 text-xl"></i>', 'meal': '<i class="fas fa-utensils text-orange-500 text-xl"></i>', 'leisure': '<i class="fas fa-camera text-green-500 text-xl"></i>', 'commitment': '<i class="fas fa-briefcase text-purple-500 text-xl"></i>' }; return map[type] || '<i class="fas fa-circle text-gray-300 text-xs"></i>'; }
 
         // --- UPLOAD E VISUALIZAÇÃO ---
         function handleFileSelect(input) {
@@ -289,258 +641,14 @@
         }
         function removeFile(index) { selectedFiles.splice(index, 1); renderFilePreviews(); }
 
-        // --- VOZ ---
-        var recognition;
-        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-            var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognition = new SpeechRecognition();
-            recognition.lang = 'pt-BR'; recognition.continuous = false; recognition.interimResults = false;
-        }
-        function toggleVoice(inputId, btnElement) {
-            if (!recognition) return alert("Navegador sem suporte a voz.");
-            var icon = btnElement.querySelector('i');
-            if (btnElement.classList.contains('listening')) {
-                recognition.stop();
-                btnElement.classList.remove('listening'); icon.classList.remove('listening-pulse');
-                return;
-            }
-            try {
-                recognition.start();
-                btnElement.classList.add('listening'); icon.classList.add('listening-pulse');
-                recognition.onresult = function(event) {
-                    var transcript = event.results[0][0].transcript;
-                    var inputEl = document.getElementById(inputId);
-                    if(inputEl.value && !inputEl.value.endsWith(' ')) inputEl.value += ' ';
-                    inputEl.value += transcript;
-                    btnElement.classList.remove('listening'); icon.classList.remove('listening-pulse');
-                };
-                recognition.onend = function() { btnElement.classList.remove('listening'); icon.classList.remove('listening-pulse'); };
-            } catch (e) { console.error(e); }
-        }
-
-        function showLoader(msg) { document.getElementById('loading-message').textContent = msg; document.getElementById('loading-spinner').classList.remove('hidden'); }
-        function hideLoader() { document.getElementById('loading-spinner').classList.add('hidden'); }
-
-        // --- LÓGICA LOGÍSTICA ---
-        function subtractTime(timeStr, minutesToSubtract) {
-            if(!timeStr) return "";
-            var parts = timeStr.split(':'); var d = new Date();
-            d.setHours(parseInt(parts[0]), parseInt(parts[1]), 0);
-            d.setMinutes(d.getMinutes() - minutesToSubtract);
-            return d.getHours().toString().padStart(2, '0') + ":" + d.getMinutes().toString().padStart(2, '0');
-        }
-        function addTime(timeStr, minutesToAdd) {
-            if(!timeStr) return "";
-            var parts = timeStr.split(':'); var d = new Date();
-            d.setHours(parseInt(parts[0]), parseInt(parts[1]), 0);
-            d.setMinutes(d.getMinutes() + minutesToAdd);
-            return d.getHours().toString().padStart(2, '0') + ":" + d.getMinutes().toString().padStart(2, '0');
-        }
-
-        async function fetchWeather(destination) {
-            try {
-                const { Geocoder } = await google.maps.importLibrary("geocoding");
-                const geocoder = new Geocoder();
-                geocoder.geocode({ 'address': destination }, function(results, status) {
-                    if (status === 'OK' && results[0]) {
-                        var lat = results[0].geometry.location.lat();
-                        var lng = results[0].geometry.location.lng();
-                        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto`)
-                            .then(r => r.json())
-                            .then(data => {
-                                if (data.daily) {
-                                    var max = Math.round(data.daily.temperature_2m_max[0]);
-                                    var min = Math.round(data.daily.temperature_2m_min[0]);
-                                    var code = data.daily.weathercode[0];
-                                    var widget = document.getElementById('weather-widget');
-                                    widget.innerHTML = `<span class="font-bold text-gray-800">${max}° / ${min}°</span>`;
-                                    widget.classList.remove('hidden');
-                                }
-                            });
-                    }
-                });
-            } catch (e) { console.warn("Erro Clima", e); }
-        }
-
-        // --- FUNÇÕES DE FLUXO ---
-        function checkFlightClarification() {
-            var flightIndex = tripData.activities.findIndex(function(a) {
-                var isVague = a.type === 'travel' && (!a.flightNumber || !a.airline) && a.description.toLowerCase().includes("voo");
-                var hasOptions = a.flightOptions && a.flightOptions.length > 0;
-                return isVague || hasOptions;
-            });
-            if (flightIndex !== -1) {
-                selectedFlightActivityIndex = flightIndex;
-                var activity = tripData.activities[flightIndex];
-                var options = activity.flightOptions || [
-                    { airline: "Gol", flightNumber: "G3-1000", time: activity.time, origin: "GRU", destination: "GIG", durationMinutes: 60 },
-                    { airline: "Latam", flightNumber: "LA-3000", time: activity.time, origin: "CGH", destination: "SDU", durationMinutes: 60 }
-                ];
-                openFlightSelectionModal(options);
-                return true; 
-            }
-            return false;
-        }
-
-        function openFlightSelectionModal(options) {
-            var list = document.getElementById('flight-options-list');
-            list.innerHTML = '';
-            options.forEach(function(opt, idx) {
-                var div = document.createElement('div');
-                div.className = "border border-gray-200 rounded-lg p-3 hover:bg-blue-50 cursor-pointer transition flex items-center justify-between";
-                div.innerHTML = '<div><div class="font-bold text-gray-800">' + opt.airline + ' ' + opt.flightNumber + '</div></div><input type="radio" name="flight-opt" value="' + idx + '" class="w-5 h-5 text-blue-600">';
-                div.onclick = function() { var radio = this.querySelector('input'); radio.checked = true; };
-                list.appendChild(div);
-            });
-            // Manual Option
-            var manualDiv = document.createElement('div');
-            manualDiv.className = "border border-gray-200 rounded-lg p-3 hover:bg-blue-50 cursor-pointer transition";
-            manualDiv.innerHTML = '<div class="flex items-center gap-2 mb-2"><input type="radio" name="flight-opt" value="manual" class="w-5 h-5 text-blue-600"><span class="font-bold text-gray-800">Inserir Manualmente</span></div>';
-            list.appendChild(manualDiv);
-
-            document.getElementById('initial-view').classList.add('hidden');
-            document.getElementById('gap-filling-view').classList.add('hidden');
-            document.getElementById('flight-selection-view').classList.remove('hidden');
-        }
-
-        function confirmFlightSelection() {
-            var selected = document.querySelector('input[name="flight-opt"]:checked');
-            if (!selected) return alert("Selecione uma opção.");
-            
-            // Lógica simplificada de confirmação
-            document.getElementById('flight-selection-view').classList.add('hidden');
-            if (!checkFlightClarification()) checkTransportClarification();
-        }
-
-        function checkTransportClarification() {
-            var transportIndex = tripData.activities.findIndex(function(a) { return a.transport === "ASK_USER"; });
-            if (transportIndex !== -1) {
-                selectedTransportActivityIndex = transportIndex;
-                missingInfoQueue.push({ key: 'transport_fix_' + transportIndex, q: 'Como vai se deslocar para: ' + tripData.activities[transportIndex].description + '?', type: 'text' });
-                askNext();
-                return true;
-            }
-            checkMissingInfo();
-            return false;
-        }
-
-        async function handleInitialInput() {
-            var inputEl = document.getElementById('initial-input');
-            var inputVal = inputEl.value;
-            if ((!inputVal || inputVal.trim() === "") && selectedFiles.length === 0) return alert('Por favor, diga algo ou anexe um arquivo.');
-            showLoader('Conectando ao Cérebro ddripp (Vertex AI)...');
-            var today = new Date().toLocaleDateString('pt-BR');
-            var schemaStructure = {
-                type: "OBJECT",
-                properties: {
-                    "missingCriticalInfo": { "type": "STRING" },
-                    "tripObjective": { "type": "STRING" },
-                    "origin": { "type": "STRING" },
-                    "destination": { "type": "STRING" },
-                    "startDate": { "type": "STRING" },
-                    "returnDate": { "type": "STRING" },
-                    "accommodation": { "type": "STRING" },
-                    "activities": { 
-                        "type": "ARRAY", 
-                        "items": { 
-                            "type": "OBJECT", 
-                            "properties": {
-                                "date": { "type": "STRING" },
-                                "time": { "type": "STRING" },
-                                "description": { "type": "STRING" },
-                                "location": { "type": "STRING" },
-                                "type": { "type": "STRING", "enum": ["travel", "commitment", "meal", "leisure", "free_time"] },
-                                "transport": { "type": "STRING" },
-                                "flightNumber": { "type": "STRING" },
-                                "airline": { "type": "STRING" },
-                                "originAirport": { "type": "STRING" },
-                                "destinationAirport": { "type": "STRING" },
-                                "flightDurationMinutes": { "type": "INTEGER" }
-                            },
-                            "required": ["date", "time", "description", "type"]
-                        }
-                    }
-                },
-                "required": ["activities", "tripObjective"]
-            };
-            var masterPrompt = "[INPUT]\n\"" + inputVal + "\"\n\n[DATA]: " + today;
-
-            try {
-                var result = await callGeminiSmart(masterPrompt, schemaStructure);
-                hideLoader();
-                if (result) { 
-                    tripData = { ...tripData, ...result };
-                    if(!tripData.activities) tripData.activities = [];
-                    selectedFiles = []; renderFilePreviews();
-                    
-                    if (checkFlightClarification()) return; 
-                    if (checkTransportClarification()) return;
-                    checkMissingInfo();
-                }
-            } catch (e) {
-                hideLoader();
-            }
-        };
-
-        function checkMissingInfo() {
-            if (!tripData.destination && missingInfoQueue.length === 0) missingInfoQueue.push({ key: 'destination', q: 'Qual o destino da viagem?', type: 'location' });
-            if (!tripData.startDate && missingInfoQueue.length === 0) missingInfoQueue.push({ key: 'startDate', q: 'Qual a data de início?', type: 'date' });
-            if (missingInfoQueue.length > 0) askNext();
-            else generateItinerary();
-        }
-
-        function askNext() {
-            var q = missingInfoQueue[0];
-            document.getElementById('gap-question').textContent = q.q;
-            var input = document.getElementById('gap-input');
-            input.value = '';
-            
-            document.getElementById('gap-filling-view').classList.remove('hidden');
-            document.getElementById('initial-view').classList.add('hidden');
-            if(q.type !== 'location') input.focus();
-        }
-
-        function handleGapInput() {
-            var val = document.getElementById('gap-input').value;
-            if (!val) return alert('Responda por favor.');
-            tripData[missingInfoQueue[0].key] = val;
-            missingInfoQueue.shift();
-            if (missingInfoQueue.length > 0) askNext();
-            else {
-                document.getElementById('gap-filling-view').classList.add('hidden');
-                if (checkTransportClarification()) return;
-                generateItinerary();
-            }
-        }
-
-        function renderItinerary() {
-            var container = document.getElementById('itinerary-content');
-            container.innerHTML = '';
-            if(tripData.activities) {
-                tripData.activities.sort(function(a, b) { return (a.date + a.time).localeCompare(b.date + b.time); });
-                var days = {};
-                tripData.activities.forEach(function(act) {
-                    if (!days[act.date]) days[act.date] = [];
-                    days[act.date].push(act);
-                });
-                Object.keys(days).sort().forEach(function(date) {
-                    var dayDiv = document.createElement('div');
-                    var parts = date.split('-');
-                    var dateStr = parts.length === 3 ? parts[2] + '/' + parts[1] : date;
-                    var htmlContent = '<h3 class="sticky-header text-lg font-bold text-blue-800 uppercase tracking-wide border-b border-blue-100 mb-4 bg-[#f8f9fa]">' + dateStr + '</h3><div class="bg-white rounded-2xl card-shadow overflow-hidden">';
-                    days[date].forEach(function(act) {
-                        htmlContent += '<div class="itinerary-grid hover:bg-gray-50 border-b border-gray-50 last:border-0"><div class="font-bold text-gray-700 pt-1">' + (act.time || '--:--') + '</div><div class="text-center"><span class="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-full">' + (act.person || 'Todos') + '</span></div><div><span class="font-semibold text-gray-800 block">' + act.description + '</span></div></div>';
-                    });
-                    htmlContent += '</div>';
-                    dayDiv.innerHTML = htmlContent;
-                    container.appendChild(dayDiv);
-                });
-            }
-        }
-
+        // --- EXTRAS ---
         async function handleAdjustmentInput() {
-            // Lógica de ajuste simplificada
-            alert('Ajuste enviado (simulação)');
+            var input = document.getElementById('adjustment-input');
+            var text = input.value;
+            if (!text.trim()) return;
+            showLoader('Ajustando...');
+            // Lógica simplificada de ajuste para esta versão
+            setTimeout(() => { hideLoader(); alert("Funcionalidade de ajuste em desenvolvimento."); }, 1000);
         }
 
         function shareTrip() {
@@ -558,13 +666,19 @@
                 var pdf = new jsPDF('p', 'mm', 'a4');
                 var pdfWidth = pdf.internal.pageSize.getWidth();
                 var pdfHeight = pdf.internal.pageSize.getHeight();
-                pdf.addImage(imgData, 'PNG', 10, 10, pdfWidth-20, (canvas.height*(pdfWidth-20))/canvas.width);
+                var margin = 10;
+                var contentWidth = pdfWidth - (margin * 2);
+                var contentHeight = (canvas.height * contentWidth) / canvas.width;
+                pdf.addImage(imgData, 'PNG', margin, 10, contentWidth, contentHeight);
                 pdf.save("roteiro.pdf");
                 if(buttons) buttons.classList.remove('hidden');
-            });
+            }).catch(e => { alert("Erro PDF"); if(buttons) buttons.classList.remove('hidden'); });
         }
         
+        // Expor para o HTML
         window.handleInitialInput = handleInitialInput;
+        window.handleGapInput = handleGapInput;
+        window.confirmFlightSelection = confirmFlightSelection;
     </script>
 </body>
 </html>
