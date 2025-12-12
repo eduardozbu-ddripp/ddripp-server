@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ddripp - Digital Roadbook (V52 Flight Logic)</title>
+    <title>ddripp - Digital Roadbook (V53 Final Fix)</title>
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✈️</text></svg>">
 
@@ -20,7 +20,7 @@
         window.ENDPOINT_URL = "https://generateroadbook-swx7ffu2ra-uc.a.run.app"; 
         var SERVER_SHARE_URL = "https://ddripp-server.onrender.com/share"; 
 
-        // UTILITÁRIOS GLOBAIS
+        // UTILITÁRIOS GLOBAIS (Definidos no topo para evitar ReferenceError)
         window.logToScreen = function(msg, type = 'info') {
             const consoleEl = document.getElementById('debug-console');
             if(!consoleEl) return;
@@ -28,10 +28,13 @@
             consoleEl.innerHTML += `<div class="${color} mb-1 border-b border-gray-800 pb-1 font-mono text-xs">${msg}</div>`;
             consoleEl.scrollTop = consoleEl.scrollHeight;
         };
+        
         window.showLoader = function(msg) {
-            document.getElementById('loading-message').innerText = msg;
+            const el = document.getElementById('loading-message');
+            if(el) el.innerText = msg;
             document.getElementById('loading-spinner').classList.remove('hidden');
         };
+        
         window.hideLoader = function() {
             document.getElementById('loading-spinner').classList.add('hidden');
         };
@@ -82,7 +85,7 @@
         <div id="initial-view" class="flex flex-col items-center justify-center min-h-[70vh]">
              <header class="text-center mb-10">
                 <h1 class="text-6xl font-bold text-gray-900 tracking-tighter">ddripp</h1>
-                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V52</p>
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V53</p>
             </header>
             
             <div class="bg-white p-6 rounded-2xl card-shadow w-full shadow-lg border border-gray-100 relative">
@@ -169,27 +172,27 @@
         <div id="debug-console" class="p-2 h-24 overflow-y-auto text-gray-300"><div>Pronto.</div></div>
     </div>
 
-    <div id="fixed-footer-input" class="hidden fixed bottom-8 left-0 w-full bg-white/90 backdrop-blur-md p-4 border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-40 no-print">
-        <div class="container mx-auto max-w-2xl flex items-center gap-3">
-            <div class="relative flex-grow">
-                <input type="text" id="adjustment-input" placeholder="Fale ou digite um ajuste..." class="w-full p-4 pr-12 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm outline-none transition">
-                <button onclick="toggleVoice('adjustment-input', this)" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-600 transition p-2 rounded-full hover:bg-gray-100">
-                    <i class="fas fa-microphone"></i>
-                </button>
-            </div>
-            <button onclick="handleAdjustmentInput()" class="bg-blue-600 text-white w-14 h-14 rounded-full flex items-center justify-center hover:bg-blue-700 transition-transform transform active:scale-90 shadow-lg"><i class="fas fa-paper-plane text-lg"></i></button>
-        </div>
-    </div>
-    
     <script>
-        // =================================================================
-        // DADOS GLOBAIS
-        // =================================================================
         var tripData = { origin: null, destination: null, startDate: null, returnDate: null, activities: [], title: '', tripObjective: '', weatherForecast: '', accommodation: null };
         var missingInfoQueue = [];
         var selectedFlightActivityIndex = -1; 
         var selectedFiles = []; 
         var destinationImageUrl = "";
+
+        // --- DEFININDO FUNÇÕES AUXILIARES PRIMEIRO (Para evitar ReferenceError) ---
+        function renderFilePreviews() {
+            var container = document.getElementById('file-preview-container');
+            container.innerHTML = '';
+            if (selectedFiles.length > 0) container.classList.remove('hidden'); else container.classList.add('hidden');
+            selectedFiles.forEach((file, index) => {
+                container.innerHTML += `<div class="file-badge"><i class="fas fa-file-alt mr-2"></i>${file.name} <button onclick="removeFile(${index})" class="ml-2 text-red-500 hover:text-red-700 font-bold">×</button></div>`;
+            });
+        }
+
+        function removeFile(index) { 
+            selectedFiles.splice(index, 1); 
+            renderFilePreviews(); 
+        }
 
         // --- CORE: CHAMADA AO ENDPOINT ---
         async function callGeminiSmart(promptText, schema) {
@@ -287,7 +290,7 @@
             tripData.activities = newActivities.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
         }
 
-        // --- FLUXO DE VOOS (MENU DROP DOWN FORÇADO) ---
+        // --- FLUXO DE VOOS ---
         function checkFlightClarification() {
             var flightIndex = tripData.activities.findIndex(function(a) {
                 var isVague = a.type === 'travel' && (!a.flightNumber || !a.airline || a.flightNumber === "0000");
@@ -298,7 +301,6 @@
                 selectedFlightActivityIndex = flightIndex;
                 var activity = tripData.activities[flightIndex];
                 
-                // Se o Fine-Tuned não trouxe opções, criamos 3 baseadas na rota para o menu funcionar
                 var options = activity.flightOptions;
                 if (!options || options.length === 0) {
                     options = [
@@ -317,8 +319,7 @@
             var list = document.getElementById('flight-options-list');
             list.innerHTML = '';
             
-            // Atualiza link do Google Flights
-            var flightDate = activity.date; // YYYY-MM-DD
+            var flightDate = activity.date; 
             var flightLink = `https://www.google.com/travel/flights?q=Flights%20to%20${activity.destinationAirport}%20from%20${activity.originAirport}%20on%20${flightDate}`;
             document.getElementById('google-flights-link').href = flightLink;
             document.getElementById('flight-route-display').innerText = `${activity.originAirport || 'Origem'} -> ${activity.destinationAirport || 'Destino'} (${activity.date})`;
@@ -362,19 +363,14 @@
                 delete activity.flightOptions;
             } else {
                 var idx = parseInt(selected.value);
-                // Recupera as opções (assumindo que o modal foi preenchido com elas)
-                var options = activity.flightOptions;
-                if(!options || options.length === 0) {
-                     // Fallback se as opções vieram do mock
-                     options = [
-                        { airline: "Opção A (Manhã)", flightNumber: "08:00", time: "08:00" },
-                        { airline: "Opção B (Tarde)", flightNumber: "14:00", time: "14:00" },
-                        { airline: "Opção C (Noite)", flightNumber: "20:00", time: "20:00" }
+                var options = activity.flightOptions || [
+                        { airline: "Opção A", flightNumber: "08:00", time: "08:00" },
+                        { airline: "Opção B", flightNumber: "14:00", time: "14:00" },
+                        { airline: "Opção C", flightNumber: "20:00", time: "20:00" }
                     ];
-                }
                 var opt = options[idx];
                 activity.time = opt.time;
-                activity.airline = opt.airline.split(' ')[0]; // Limpa "Opção A"
+                activity.airline = opt.airline.split(' ')[0];
                 activity.flightNumber = opt.flightNumber;
                 if(opt.origin) activity.originAirport = opt.origin;
                 if(opt.destination) activity.destinationAirport = opt.destination;
@@ -405,7 +401,6 @@
             showLoader('Consultando Modelo Fine-Tuned...');
             var today = new Date().toLocaleDateString('pt-BR');
             
-            // SYSTEM INSTRUCTION FORÇADA NO PROMPT
             var masterPrompt = `[ROLE] Você é o 'ddripp', expert logístico.
             [REGRAS]
             1. Se o usuário NÃO der o número do voo, gere 3 opções realistas em 'flightOptions' (Manhã, Tarde, Noite).
@@ -413,7 +408,6 @@
             [DATA ATUAL]: ${today}
             [INPUT]: "${inputVal}"`;
 
-            // SCHEMA
             var schemaStructure = {
                 type: "OBJECT",
                 properties: {
@@ -485,6 +479,7 @@
         function checkMissingInfo() {
             if (!tripData.destination && missingInfoQueue.length === 0) missingInfoQueue.push({ key: 'destination', q: 'Qual o destino da viagem?', type: 'location' });
             if (!tripData.startDate && missingInfoQueue.length === 0) missingInfoQueue.push({ key: 'startDate', q: 'Qual a data de início?', type: 'date' });
+            if (!tripData.returnDate && missingInfoQueue.length === 0) missingInfoQueue.push({ key: 'returnDate', q: 'Qual a data de retorno?', type: 'date' });
             if (missingInfoQueue.length > 0) askNext();
             else generateItinerary();
         }
@@ -573,7 +568,10 @@
                     var htmlContent = '<h3 class="sticky-header text-lg font-bold text-blue-800 uppercase tracking-wide border-b border-blue-100 mb-4 bg-[#f8f9fa]">' + dateStr + '</h3>' +
                         '<div class="bg-white rounded-2xl card-shadow overflow-hidden">';
                     days[date].forEach(function(act) {
-                        // --- RENDERIZAÇÃO DE VOO (DROPDOWN) ---
+                        
+                        // COLUNA 2: PESSOA
+                        var personTag = '<div class="text-center"><span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-full w-full block truncate border border-blue-100">' + (act.person || 'Todos') + '</span></div>';
+
                         if (act.type === 'travel' && act.flightNumber) { 
                             var flightTime = act.time;
                             var boardingTime = subtractTime(flightTime, 40); 
@@ -582,11 +580,11 @@
                             var landingTime = addTime(flightTime, duration);
                             var transferTime = addTime(landingTime, 30);
                             
-                            htmlContent += '<details class="group">' +
-                                '<summary class="p-4 border-b border-gray-50 hover:bg-blue-50 transition last:border-0 list-none">' +
+                            htmlContent += '<details class="group border-b border-gray-50 last:border-0">' +
+                                '<summary class="p-4 hover:bg-gray-50 transition last:border-0 list-none">' +
                                 '<div class="itinerary-grid">' +
                                 '<div class="font-bold text-gray-700">' + act.time + '</div>' +
-                                '<div class="text-center"><span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-full w-full block truncate border border-blue-100">' + (act.person || 'Todos') + '</span></div>' +
+                                personTag +
                                 '<div>' +
                                 '<div class="flex items-center justify-between">' +
                                 '<span class="font-bold text-blue-600"><i class="fas fa-plane-departure mr-2"></i>Decolagem ' + (act.airline || '') + ' ' + (act.flightNumber || '') + '</span>' +
@@ -608,17 +606,21 @@
                                 '</div>' +
                                 '</details>';
                         } else {
-                            // --- RENDERIZAÇÃO PADRÃO (3 COLUNAS) ---
                             var locationHtml = '';
                             if (act.location) {
                                 var mapQuery = encodeURIComponent(act.location);
                                 var urlMap = 'https://www.google.com/maps/dir/?api=1&destination=' + mapQuery;
+                                if(act.location.includes("para")) {
+                                    // Link de rota
+                                    var parts = act.location.split("para");
+                                    urlMap = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(parts[0])}&destination=${encodeURIComponent(parts[1])}&travelmode=driving`;
+                                }
                                 locationHtml = '<a href="' + urlMap + '" target="_blank" class="map-link text-sm mt-1"> <i class="fas fa-map-marker-alt text-red-500 mr-1"></i> ' + act.location + '</a>';
                             }
                             
                             htmlContent += '<div class="itinerary-grid hover:bg-gray-50 border-b border-gray-50 last:border-0">' +
                                 '<div class="font-bold text-gray-700 pt-1 text-right">' + (act.time || '--:--') + '</div>' +
-                                '<div class="text-center"><span class="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-full inline-block w-full truncate">' + (act.person || 'Todos') + '</span></div>' +
+                                personTag +
                                 '<div>' +
                                 '<div class="flex items-start">' +
                                 '<div class="mr-3 mt-1">' + getIcon(act.type) + '</div>' +
@@ -683,7 +685,12 @@
         }
 
         function getIcon(type) { var map = { 'travel': '<i class="fas fa-plane text-blue-500 text-xl"></i>', 'meal': '<i class="fas fa-utensils text-orange-500 text-xl"></i>', 'leisure': '<i class="fas fa-camera text-green-500 text-xl"></i>', 'commitment': '<i class="fas fa-briefcase text-purple-500 text-xl"></i>' }; return map[type] || '<i class="fas fa-circle text-gray-300 text-xs"></i>'; }
-        function handleFileSelect(input) { alert("Upload simulado."); }
+        function handleFileSelect(input) { 
+            var files = Array.from(input.files);
+            if (!files.length) return;
+            selectedFiles = files; // Simplificado para este exemplo
+            renderFilePreviews();
+        }
         async function handleAdjustmentInput() { alert('Ajuste simulado.'); }
         function shareTrip() { window.open(`https://wa.me/?text=${encodeURIComponent(tripData.tripObjective)}`); }
         function downloadPDF() { alert("Gerando PDF..."); }
