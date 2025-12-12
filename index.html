@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ddripp - Digital Roadbook (V53 Final Fix)</title>
+    <title>ddripp - Agente Logístico (V54 Persona Integration)</title>
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✈️</text></svg>">
 
@@ -14,13 +14,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <script>
+        // CONFIGURAÇÃO DE API E ENDPOINTS
         var k1 = "AIzaSyA9wFITzUsGHwj";
         var k2 = "mfLO615E66sqCq9XYzZI";
         window.API_KEY_FINAL = k1 + k2;
         window.ENDPOINT_URL = "https://generateroadbook-swx7ffu2ra-uc.a.run.app"; 
         var SERVER_SHARE_URL = "https://ddripp-server.onrender.com/share"; 
 
-        // UTILITÁRIOS GLOBAIS (Definidos no topo para evitar ReferenceError)
+        // UTILITÁRIOS GLOBAIS
         window.logToScreen = function(msg, type = 'info') {
             const consoleEl = document.getElementById('debug-console');
             if(!consoleEl) return;
@@ -41,6 +42,7 @@
     </script>
 
     <script>
+        // CARREGAMENTO GOOGLE MAPS
         (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({key: window.API_KEY_FINAL, v: "weekly"});
     </script>
 
@@ -48,7 +50,6 @@
         body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; color: #1f2937; }
         .card-shadow { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05); }
         
-        /* 3 COLUNAS MANTIDAS */
         .itinerary-grid { display: grid; grid-template-columns: 70px 90px 1fr; gap: 1rem; align-items: start; padding: 1.25rem; border-bottom: 1px solid #f3f4f6; }
         @media (max-width: 640px) { .itinerary-grid { grid-template-columns: 50px 70px 1fr; gap: 0.5rem; padding: 1rem; font-size: 0.9rem; } }
         
@@ -85,7 +86,7 @@
         <div id="initial-view" class="flex flex-col items-center justify-center min-h-[70vh]">
              <header class="text-center mb-10">
                 <h1 class="text-6xl font-bold text-gray-900 tracking-tighter">ddripp</h1>
-                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V53</p>
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • Agente Logístico</p>
             </header>
             
             <div class="bg-white p-6 rounded-2xl card-shadow w-full shadow-lg border border-gray-100 relative">
@@ -179,7 +180,7 @@
         var selectedFiles = []; 
         var destinationImageUrl = "";
 
-        // --- DEFININDO FUNÇÕES AUXILIARES PRIMEIRO (Para evitar ReferenceError) ---
+        // --- FUNÇÕES AUXILIARES ---
         function renderFilePreviews() {
             var container = document.getElementById('file-preview-container');
             container.innerHTML = '';
@@ -196,7 +197,7 @@
 
         // --- CORE: CHAMADA AO ENDPOINT ---
         async function callGeminiSmart(promptText, schema) {
-            window.logToScreen("Enviando dados para o modelo Fine-Tuned...", 'info');
+            window.logToScreen("Enviando dados para o Agente Logístico...", 'info');
             try {
                 const response = await fetch(window.ENDPOINT_URL, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -205,7 +206,7 @@
                 if (!response.ok) throw new Error(await response.text());
                 const data = await response.json();
                 if (data.error) throw new Error(data.error);
-                window.logToScreen("SUCESSO: O modelo treinado respondeu!", 'success');
+                window.logToScreen("SUCESSO: O Agente respondeu!", 'success');
                 const resultText = data.text;
                 try {
                     const cleanJson = resultText.replace(/```json/g, "").replace(/```/g, "").trim();
@@ -393,25 +394,59 @@
             return false;
         }
 
-        // --- HANDLERS PRINCIPAIS ---
+        // --- HANDLER PRINCIPAL (COM PERSONA INTEGRADA) ---
         async function handleInitialInput() {
             var inputEl = document.getElementById('initial-input');
             var inputVal = inputEl.value;
+            
+            // 1. Validação básica
             if ((!inputVal || inputVal.trim() === "") && selectedFiles.length === 0) return alert('Por favor, diga algo ou anexe um arquivo.');
-            showLoader('Consultando Modelo Fine-Tuned...');
+            
+            showLoader('Consultando Agente Logístico DRIPP...');
             var today = new Date().toLocaleDateString('pt-BR');
             
-            var masterPrompt = `[ROLE] Você é o 'ddripp', expert logístico.
-            [REGRAS]
-            1. Se o usuário NÃO der o número do voo, gere 3 opções realistas em 'flightOptions' (Manhã, Tarde, Noite).
-            2. Extraia data, hora e local de tudo.
-            [DATA ATUAL]: ${today}
-            [INPUT]: "${inputVal}"`;
+            // 2. A PERSONA "AGENTE LOGÍSTICO DRIPP"
+            var masterPrompt = `
+            [SOURCE: SYSTEM INSTRUCTION - AGENTE LOGÍSTICO DRIPP]
+            
+            [I. PAPEL E MISSÃO]
+            Você é o Agente Logístico DRIPP, um assistente sênior com 20 anos de experiência em logística de viagens.
+            Sua missão é transformar dados brutos em um plano de viagem completo, impecável e validado.
+            
+            [II. REGRAS DE PROCESSAMENTO E GAP-FILLING]
+            1. Filtre rigorosamente: Quem, Onde, O quê, Quando e Transporte.
+            2. Cronologia: Reestruture tudo em sequência lógica. O viajante não pode ter "buracos".
+            
+            [DETECÇÃO DE LACUNAS (CRÍTICO)]
+            - HOSPEDAGEM: Para viagens com pernoite, se não houver hotel definido, preencha 'missingCriticalInfo' com: 
+              "[LEMBRETE - HOSPEDAGEM] Já temos hospedagem definida?"
+            - TRANSPORTE: Para transições distantes (ex: Aeroporto->Hotel), se não houver transporte, preencha 'missingCriticalInfo' com:
+              "[LEMBRETE - TRANSPORTE] Já temos meio de transporte definido para este trajeto?"
+            
+            [PROATIVIDADE LOGÍSTICA]
+            - Crie etapas de "Deslocamento" baseadas em cálculos simulados (ex: Saída do Hotel 1h antes do compromisso).
+            
+            [PROCESSAMENTO DE VOOS]
+            - Se o voo for vago, gere 3 opções em 'flightOptions'.
+            - Se o voo for definitivo, crie etapas detalhadas: Chegada Aeroporto (-2h), Embarque (-40min), Decolagem, Aterragem.
+            
+            [III. CURADORIA (BAIXA EMISSÃO)]
+            - Identifique horários de refeição e sugira restaurantes locais.
+            - Identifique 'Tempo Livre' e sugira atividades de baixa emissão (caminhadas, cultura).
+            
+            [IV. FORMATO DE RESPOSTA]
+            Responda APENAS com JSON válido seguindo o schema abaixo. Não converse.
+            
+            [CONTEXTO ATUAL]
+            Data de Hoje: ${today}
+            Input do Usuário: "${inputVal}"
+            `;
 
+            // Schema compatível com Frontend
             var schemaStructure = {
                 type: "OBJECT",
                 properties: {
-                    "missingCriticalInfo": { "type": "STRING" },
+                    "missingCriticalInfo": { "type": "STRING", "description": "Use APENAS para as tags [LEMBRETE - ...] ou perguntas cruciais." },
                     "tripObjective": { "type": "STRING" },
                     "weatherForecast": { "type": "STRING" },
                     "origin": { "type": "STRING" },
@@ -452,8 +487,10 @@
             };
 
             try {
+                // Chamada ao Fine-Tune com a Nova Persona
                 var result = await callGeminiSmart(masterPrompt, schemaStructure);
                 hideLoader();
+                
                 if (result) { 
                     tripData = { ...tripData, ...result };
                     if(!tripData.activities) tripData.activities = [];
@@ -464,15 +501,31 @@
                     if (checkFlightClarification()) return; 
                     if (checkTransportClarification()) return;
                     
+                    // --- O REFLEXO: TRATAMENTO DOS LEMBRETES DA PERSONA ---
                     if (tripData.missingCriticalInfo) {
-                        if (!tripData.destination && tripData.missingCriticalInfo.toLowerCase().includes("destino")) missingInfoQueue.push({ key: 'destination', q: tripData.missingCriticalInfo, type: 'location' });
-                        else if (!tripData.startDate && tripData.missingCriticalInfo.toLowerCase().includes("data")) missingInfoQueue.push({ key: 'startDate', q: tripData.missingCriticalInfo, type: 'date' });
+                        var msg = tripData.missingCriticalInfo;
+                        
+                        // Lembrete de Hospedagem -> Abre busca de Local
+                        if (msg.includes("[LEMBRETE - HOSPEDAGEM]")) {
+                            missingInfoQueue.push({ key: 'accommodation', q: msg.replace('[LEMBRETE - HOSPEDAGEM]', '').trim(), type: 'location' });
+                        }
+                        // Lembrete de Transporte -> Abre pergunta de Texto
+                        else if (msg.includes("[LEMBRETE - TRANSPORTE]")) {
+                            missingInfoQueue.push({ key: 'general_transport_gap', q: msg.replace('[LEMBRETE - TRANSPORTE]', '').trim(), type: 'text' });
+                        }
+                        // Perguntas Genéricas (Fallback)
+                        else {
+                            if (!tripData.destination && msg.toLowerCase().includes("destino")) missingInfoQueue.push({ key: 'destination', q: msg, type: 'location' });
+                            else if (!tripData.startDate && msg.toLowerCase().includes("data")) missingInfoQueue.push({ key: 'startDate', q: msg, type: 'date' });
+                        }
                     }
+                    
                     checkMissingInfo();
                 }
             } catch (e) {
                 hideLoader();
                 console.error(e);
+                alert("O Agente DRIPP encontrou um erro: " + e.message);
             }
         };
 
@@ -519,7 +572,13 @@
         function handleGapInput() {
             var val = document.getElementById('gap-input').value;
             if (!val) return alert('Por favor, responda.');
-            if (missingInfoQueue[0].key.startsWith('transport_fix_')) {
+            
+            // Tratamento especial para perguntas genéricas de transporte
+            if (missingInfoQueue[0].key === 'general_transport_gap') {
+                // Não salvamos num campo específico, apenas avançamos
+                window.logToScreen("Transporte definido: " + val);
+            }
+            else if (missingInfoQueue[0].key.startsWith('transport_fix_')) {
                 var idx = parseInt(missingInfoQueue[0].key.split('_')[2]);
                 tripData.activities[idx].transport = val;
                 tripData.activities[idx].description += " (" + val + ")";
@@ -538,7 +597,7 @@
         function generateItinerary() {
             document.getElementById('initial-view').classList.add('hidden');
             document.getElementById('itinerary-view').classList.remove('hidden');
-            document.getElementById('fixed-footer-input').classList.remove('hidden');
+            // document.getElementById('fixed-footer-input').classList.remove('hidden'); // Comentado se não existir no HTML
             document.getElementById('trip-title').textContent = tripData.tripObjective || ("Viagem para " + tripData.destination);
             document.getElementById('trip-destination').textContent = tripData.destination;
             var wikiLink = document.getElementById('trip-destination-link');
@@ -578,7 +637,6 @@
                             var arrivalAirportTime = subtractTime(flightTime, 120); 
                             var duration = act.flightDurationMinutes || 120; 
                             var landingTime = addTime(flightTime, duration);
-                            var transferTime = addTime(landingTime, 30);
                             
                             htmlContent += '<details class="group border-b border-gray-50 last:border-0">' +
                                 '<summary class="p-4 hover:bg-gray-50 transition last:border-0 list-none">' +
@@ -641,7 +699,7 @@
             }
         }
 
-        // --- UTILS ---
+        // --- UTILS & EXTERNOS ---
         function loadHeaderImage() {
             if (!SERVER_SHARE_URL) return;
             var dynamicImgUrl = SERVER_SHARE_URL.replace('/share', '/dynamic-cover') + `?dest=${encodeURIComponent(tripData.destination)}&date=${encodeURIComponent(tripData.startDate||'')}`;
@@ -684,18 +742,19 @@
             } catch (e) { console.warn("Erro Clima", e); }
         }
 
-        function getIcon(type) { var map = { 'travel': '<i class="fas fa-plane text-blue-500 text-xl"></i>', 'meal': '<i class="fas fa-utensils text-orange-500 text-xl"></i>', 'leisure': '<i class="fas fa-camera text-green-500 text-xl"></i>', 'commitment': '<i class="fas fa-briefcase text-purple-500 text-xl"></i>' }; return map[type] || '<i class="fas fa-circle text-gray-300 text-xs"></i>'; }
+        function getIcon(type) { var map = { 'travel': '<i class="fas fa-plane text-blue-500 text-xl"></i>', 'meal': '<i class="fas fa-utensils text-orange-500 text-xl"></i>', 'leisure': '<i class="fas fa-camera text-green-500 text-xl"></i>', 'commitment': '<i class="fas fa-briefcase text-purple-500 text-xl"></i>', 'free_time': '<i class="fas fa-walking text-teal-500 text-xl"></i>' }; return map[type] || '<i class="fas fa-circle text-gray-300 text-xs"></i>'; }
+        
         function handleFileSelect(input) { 
             var files = Array.from(input.files);
             if (!files.length) return;
             selectedFiles = files; // Simplificado para este exemplo
             renderFilePreviews();
         }
-        async function handleAdjustmentInput() { alert('Ajuste simulado.'); }
+        
         function shareTrip() { window.open(`https://wa.me/?text=${encodeURIComponent(tripData.tripObjective)}`); }
         function downloadPDF() { alert("Gerando PDF..."); }
-        function toggleVoice(inputId, btnElement) { alert("Voz ativada (Simulação)"); }
 
+        // EXPORTANDO FUNÇÕES PARA O HTML
         window.handleInitialInput = handleInitialInput;
         window.handleGapInput = handleGapInput;
         window.confirmFlightSelection = confirmFlightSelection;
