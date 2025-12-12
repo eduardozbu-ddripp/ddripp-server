@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ddripp - Digital Roadbook (V50 Stability)</title>
+    <title>ddripp - Digital Roadbook (V51 Layout Restaurado)</title>
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✈️</text></svg>">
 
@@ -20,19 +20,16 @@
         window.ENDPOINT_URL = "https://generateroadbook-swx7ffu2ra-uc.a.run.app"; 
         var SERVER_SHARE_URL = "https://ddripp-server.onrender.com/share"; 
 
-        // Função de Log (Global e Imediata)
+        // LOG & LOADER GLOBAIS
         window.logToScreen = function(msg, type = 'info') {
             const consoleEl = document.getElementById('debug-console');
             if(!consoleEl) return;
-            const color = type === 'error' ? 'text-red-400' : (type === 'success' ? 'text-green-400' : 'text-gray-300');
+            const color = type === 'error' ? 'text-red-400' : 'text-gray-300';
             consoleEl.innerHTML += `<div class="${color} mb-1 border-b border-gray-800 pb-1 font-mono text-xs">${msg}</div>`;
             consoleEl.scrollTop = consoleEl.scrollHeight;
         };
-
-        // Funções de Loader
         window.showLoader = function(msg) {
-            const el = document.getElementById('loading-message');
-            if(el) el.innerText = msg;
+            document.getElementById('loading-message').innerText = msg;
             document.getElementById('loading-spinner').classList.remove('hidden');
         };
         window.hideLoader = function() {
@@ -47,14 +44,25 @@
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; color: #1f2937; }
         .card-shadow { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05); }
-        .itinerary-grid { display: grid; grid-template-columns: 70px 1fr; gap: 1rem; align-items: start; padding: 1.25rem; border-bottom: 1px solid #f3f4f6; }
         
-        /* Header Limpo (Sem degradê escuro) */
+        /* --- LAYOUT DE 3 COLUNAS RESTAURADO --- */
+        .itinerary-grid { 
+            display: grid; 
+            grid-template-columns: 70px 90px 1fr; /* HORA | PESSOA | CONTEÚDO */
+            gap: 1rem; 
+            align-items: start; 
+            padding: 1.25rem; 
+            border-bottom: 1px solid #f3f4f6; 
+        }
+        @media (max-width: 640px) { 
+            .itinerary-grid { grid-template-columns: 50px 70px 1fr; gap: 0.5rem; padding: 1rem; font-size: 0.9rem; } 
+        }
+        
         #trip-header { position: relative; overflow: hidden; min-h: 240px; display: flex; flex-direction: column; justify-content: flex-end; }
         #header-bg-image { position: absolute; inset: 0; background-size: cover; background-position: center; z-index: 0; transition: opacity 0.5s; }
+        /* Capa limpa sem degradê escuro */
         .header-content { position: relative; z-index: 2; padding-top: 60px; }
-        /* Sombra suave branca para leitura */
-        .text-shadow-white { text-shadow: 0 2px 10px rgba(255,255,255,0.8); }
+        .text-shadow-white { text-shadow: 0 2px 10px rgba(255,255,255,0.9); }
 
         details > summary { list-style: none; cursor: pointer; transition: background 0.2s; }
         details[open] > summary { background-color: #eff6ff; border-bottom: 1px solid #dbeafe; }
@@ -79,12 +87,12 @@
         <p id="loading-message" class="text-white mt-6 text-lg font-medium animate-pulse">A consultar o Especialista ddripp...</p>
     </div>
 
-    <div id="app-container" class="container mx-auto max-w-3xl p-4 pb-32 flex-grow">
+    <div id="app-container" class="container mx-auto max-w-4xl p-4 pb-32 flex-grow">
 
         <div id="initial-view" class="flex flex-col items-center justify-center min-h-[70vh]">
              <header class="text-center mb-10">
                 <h1 class="text-6xl font-bold text-gray-900 tracking-tighter">ddripp</h1>
-                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V50</p>
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V51</p>
             </header>
             
             <div class="bg-white p-6 rounded-2xl card-shadow w-full shadow-lg border border-gray-100 relative">
@@ -132,14 +140,14 @@
                 
                 <div class="header-content mt-16 relative z-10">
                     <h2 id="trip-title" class="text-4xl font-extrabold text-gray-900 mb-2 leading-tight text-shadow-white"></h2>
-                    <div class="flex flex-wrap items-center gap-3 text-gray-600 mb-4 bg-white/60 backdrop-blur-md inline-flex px-4 py-2 rounded-full shadow-sm">
-                        <a id="trip-destination-link" href="#" target="_blank" class="flex items-center hover:text-blue-600 transition">
+                    <div class="flex flex-wrap items-center gap-3 text-gray-600 mb-4 bg-white/60 backdrop-blur-md inline-flex px-4 py-2 rounded-full shadow-sm border border-white/50">
+                        <a id="trip-destination-link" href="#" target="_blank" class="flex items-center hover:text-blue-600 transition group cursor-pointer">
                             <i class="fas fa-map-marker-alt mr-2 text-red-500"></i>
-                            <span id="trip-destination" class="font-medium text-lg"></span>
+                            <span id="trip-destination" class="font-medium text-lg group-hover:underline"></span>
                         </a>
-                        <span class="text-gray-300">•</span>
+                        <span class="text-gray-400">•</span>
                         <div class="flex items-center">
-                            <i class="fas fa-calendar-alt mr-2 text-gray-400"></i>
+                            <i class="fas fa-calendar-alt mr-2 text-gray-500"></i>
                             <span id="trip-date"></span>
                         </div>
                     </div>
@@ -147,7 +155,7 @@
                 </div>
             </header>
 
-            <div id="itinerary-content" class="px-4 space-y-8 container mx-auto max-w-3xl"></div>
+            <div id="itinerary-content" class="px-4 space-y-8 container mx-auto max-w-4xl"></div>
             
             <div id="trip-footer" class="mt-16 flex justify-center gap-4 pb-12 px-4 no-print">
                 <button onclick="shareTrip()" class="flex items-center bg-green-500 text-white font-bold py-3 px-6 rounded-full hover:bg-green-600 shadow-lg hover:-translate-y-1 transition"><i class="fab fa-whatsapp mr-2"></i> Partilhar</button>
@@ -165,7 +173,6 @@
     </div>
 
     <script type="module">
-        // Firebase (Apenas Init, sem bloquear o resto)
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         try {
             initializeApp({
@@ -213,14 +220,12 @@
 
         // --- 2. LÓGICA DE LOCALIZAÇÃO (REFINADA) ---
         function generateMapLink(locationStr) {
-            // Se for rota "A para B", gera Google Maps Directions
             if (locationStr && locationStr.includes(" para ")) {
                 const parts = locationStr.split(" para ");
                 const origin = encodeURIComponent(parts[0]);
                 const dest = encodeURIComponent(parts[1]);
                 return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}&travelmode=driving`;
             }
-            // Se for local fixo, gera Search
             return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationStr)}`;
         }
 
@@ -237,7 +242,6 @@
                 // LÓGICA DE CHEGADA (Aeroporto -> Hotel)
                 if (curr.type === 'travel' && curr.destinationAirport && curr.flightNumber) {
                     newActivities.push(curr);
-                    
                     let landingTime = addTime(curr.time, curr.flightDurationMinutes || 120);
                     let transferStart = addTime(landingTime, 45); 
                     let hotelName = tripData.accommodation || "Hospedagem";
@@ -246,6 +250,7 @@
                         date: curr.date,
                         time: transferStart,
                         type: "travel",
+                        person: curr.person, // Herda a pessoa do voo
                         transport: "Transfer",
                         description: `Transfer: Aeroporto ${curr.destinationAirport} ➝ ${hotelName}`,
                         location: `${curr.destinationAirport} para ${hotelName}`
@@ -255,17 +260,16 @@
                     continue;
                 }
 
-                // LÓGICA DE DESLOCAMENTO ENTRE ATIVIDADES
                 if (curr.location && lastLocation && !curr.location.includes(lastLocation)) {
                     let travelStart = subtractTime(curr.time, 30);
                     let hasTravel = newActivities.some(a => a.date === curr.date && a.time === travelStart);
                     
-                    // Evita criar deslocamento se a própria atividade já for um transfer
                     if (!hasTravel && !curr.description.toLowerCase().includes("transfer") && !curr.description.toLowerCase().includes("deslocamento")) {
                          newActivities.push({
                             date: curr.date,
                             time: travelStart,
                             type: "travel",
+                            person: curr.person,
                             transport: "Uber/Táxi",
                             description: `Deslocamento: ${lastLocation} ➝ ${curr.location}`,
                             location: `${lastLocation} para ${curr.location}`
@@ -279,7 +283,7 @@
             tripData.activities = newActivities.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
         }
 
-        // --- 3. RENDERIZAÇÃO VISUAL ---
+        // --- 3. RENDERIZAÇÃO VISUAL (3 COLUNAS) ---
         function renderItinerary() {
             const container = document.getElementById('itinerary-content');
             container.innerHTML = '';
@@ -310,13 +314,17 @@
                 days[date].forEach(act => {
                     const itemDiv = document.createElement('div');
                     
+                    // COLUNA 2: TAG DE PESSOA (AZUL)
+                    const personTag = `<div class="text-center"><span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-full w-full block truncate border border-blue-100">${act.person || 'Todos'}</span></div>`;
+
                     // RENDERIZAÇÃO DE VOO (DROPDOWN)
                     if (act.type === 'travel' && act.flightNumber) {
                         const arrivalTime = addTime(act.time, act.flightDurationMinutes || 120);
                         itemDiv.innerHTML = `
                             <details class="group border-b border-gray-50 last:border-0">
                                 <summary class="itinerary-grid hover:bg-gray-50 transition cursor-pointer">
-                                    <div class="font-bold text-gray-800 pt-1">${act.time}</div>
+                                    <div class="font-bold text-gray-800 pt-1 text-right">${act.time}</div>
+                                    ${personTag}
                                     <div>
                                         <div class="flex justify-between items-center">
                                             <span class="font-bold text-blue-600"><i class="fas fa-plane mr-2"></i>Voo ${act.airline || ''} ${act.flightNumber}</span>
@@ -325,7 +333,7 @@
                                         <div class="text-sm text-gray-500 mt-1">${act.originAirport || 'Origem'} ➝ ${act.destinationAirport || 'Destino'}</div>
                                     </div>
                                 </summary>
-                                <div class="bg-slate-50 p-4 border-t border-gray-100">
+                                <div class="bg-slate-50 p-4 border-t border-gray-100 pl-24">
                                     <div class="timeline-container">
                                         <div class="flight-event">
                                             <div class="flight-dot"></div>
@@ -347,7 +355,7 @@
                             </details>
                         `;
                     } else {
-                        // RENDERIZAÇÃO PADRÃO
+                        // RENDERIZAÇÃO PADRÃO (3 COLUNAS)
                         let linkHtml = '';
                         if (act.location) {
                             const url = generateMapLink(act.location);
@@ -359,9 +367,13 @@
 
                         itemDiv.className = "itinerary-grid hover:bg-gray-50 transition border-b border-gray-50 last:border-0";
                         itemDiv.innerHTML = `
-                            <div class="font-bold text-gray-800 pt-1">${act.time}</div>
+                            <div class="font-bold text-gray-800 pt-1 text-right">${act.time}</div>
+                            ${personTag}
                             <div>
-                                <div class="font-semibold text-gray-900 text-lg leading-tight">${act.description}</div>
+                                <div class="font-semibold text-gray-900 text-lg leading-tight flex items-start gap-2">
+                                    ${getIcon(act.type)}
+                                    <span>${act.description}</span>
+                                </div>
                                 ${linkHtml}
                                 ${act.transport ? `<div class="mt-2"><span class="inline-flex items-center text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded border border-gray-200"><i class="fas fa-car mr-1"></i>${act.transport}</span></div>` : ''}
                             </div>
@@ -402,6 +414,7 @@
                                 "date": { "type": "STRING" },
                                 "time": { "type": "STRING" },
                                 "description": { "type": "STRING" },
+                                "person": { "type": "STRING" },
                                 "location": { "type": "STRING" },
                                 "type": { "type": "STRING", "enum": ["travel", "commitment", "meal", "leisure"] },
                                 "transport": { "type": "STRING" },
@@ -428,11 +441,6 @@
                 
                 fillGeographicGaps(); 
                 
-                if (tripData.activities.some(a => a.flightOptions && a.flightOptions.length > 0)) {
-                    // Lógica para abrir modal de voo (simplificada aqui)
-                    // ...
-                }
-
                 if (tripData.missingCriticalInfo && (!tripData.destination || !tripData.startDate)) {
                     document.getElementById('gap-question').textContent = tripData.missingCriticalInfo;
                     document.getElementById('initial-view').classList.add('hidden');
@@ -451,12 +459,14 @@
         function generateItinerary() {
             document.getElementById('initial-view').classList.add('hidden');
             document.getElementById('gap-filling-view').classList.add('hidden');
+            document.getElementById('flight-selection-view').classList.add('hidden');
             document.getElementById('itinerary-view').classList.remove('hidden');
             
             document.getElementById('trip-title').textContent = tripData.tripObjective || "Minha Viagem";
             document.getElementById('trip-destination').textContent = tripData.destination;
             document.getElementById('trip-date').textContent = `${tripData.startDate} - ${tripData.returnDate}`;
             if(tripData.destination) {
+                // LINK DE LOCALIZAÇÃO NO CABEÇALHO AGORA CLICÁVEL
                 document.getElementById('trip-destination-link').href = generateMapLink(tripData.destination);
             }
 
@@ -467,17 +477,20 @@
         // --- UTILITÁRIOS ---
         function loadHeaderImage() {
             if (!SERVER_SHARE_URL) return;
+            fetch(SERVER_SHARE_URL).catch(() => {});
             const query = encodeURIComponent(tripData.destination || 'travel');
             const imgUrl = SERVER_SHARE_URL.replace('/share', '/dynamic-cover') + `?dest=${query}&date=${encodeURIComponent(tripData.startDate||'')}`;
-            
             const img = new Image();
             img.onload = () => {
-                const bg = document.getElementById('header-bg-image');
-                if(bg) { bg.style.backgroundImage = `url('${imgUrl}')`; bg.style.opacity = '1'; }
-                const loader = document.getElementById('header-loader');
-                if(loader) loader.classList.add('hidden');
+                document.getElementById('header-bg-image').style.backgroundImage = `url('${imgUrl}')`;
+                document.getElementById('header-loader').classList.add('hidden');
             };
             img.src = imgUrl;
+        }
+
+        function getIcon(type) { 
+            const icons = { 'travel': 'fa-plane', 'meal': 'fa-utensils', 'leisure': 'fa-camera', 'commitment': 'fa-briefcase' };
+            return `<i class="fas ${icons[type] || 'fa-circle'} text-gray-400 mt-1 text-sm"></i>`;
         }
 
         function addTime(time, mins) {
@@ -500,6 +513,10 @@
         }
         function shareTrip() { window.open(`https://wa.me/?text=${encodeURIComponent(tripData.tripObjective)}`); }
         function downloadPDF() { alert("Gerando PDF..."); }
+
+        // Mocks para funções não usadas nesta versão
+        window.toggleVoice = () => alert("Voz simulada");
+        window.confirmFlightSelection = () => generateItinerary();
 
     </script>
 </body>
