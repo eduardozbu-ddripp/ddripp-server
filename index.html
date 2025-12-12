@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ddripp - Agente Logístico (Versão Tuned Restaurada)</title>
+    <title>ddripp - Agente Logístico (Endpoint Conectado)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script type="importmap">
@@ -37,10 +37,10 @@
         <div class="flex items-center gap-3">
             <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white font-bold text-sm">dd</div>
             <div>
-                <h1 class="text-sm font-bold text-slate-900">ddripp <span class="text-xs font-normal text-slate-500 ml-1">Tuned Endpoint</span></h1>
+                <h1 class="text-sm font-bold text-slate-900">ddripp <span class="text-xs font-normal text-slate-500 ml-1">Endpoint Production</span></h1>
                 <div id="status-indicator" class="flex items-center gap-1.5 mt-0.5">
                     <span class="w-2 h-2 rounded-full bg-green-500"></span>
-                    <span class="text-[10px] text-slate-500 font-medium">Conectado ao Projeto</span>
+                    <span class="text-[10px] text-slate-500 font-medium">Conectado ao Vertex Endpoint</span>
                 </div>
             </div>
         </div>
@@ -57,7 +57,7 @@
                 <div class="w-8 h-8 rounded-full bg-slate-100 flex-shrink-0 flex items-center justify-center text-slate-600 text-xs font-bold">IA</div>
                 <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 max-w-[90%]">
                     <p class="text-sm text-slate-700">Olá. Sou o <strong>Agente Logístico ddripp</strong>.</p>
-                    <p class="text-xs text-slate-500 mt-2">Estou operando diretamente no seu endpoint treinado, reforçado pela nova instrução de sistema (v2.5 Persona).</p>
+                    <p class="text-xs text-slate-500 mt-2">Estou conectado ao seu Endpoint dedicado. As regras de Persona e Sustentabilidade serão aplicadas sobre o modelo treinado.</p>
                 </div>
             </div>
             <div id="response-area"></div>
@@ -87,7 +87,7 @@
                     <span id="loading-spinner" class="loader hidden"></span>
                 </button>
             </div>
-            <p class="text-center text-[10px] text-slate-400 font-mono" id="model-debug-info">Conectado ao Projeto: 246188888920</p>
+            <p class="text-center text-[10px] text-slate-400 font-mono" id="model-debug-info">Endpoint: ...9357440</p>
         </div>
     </div>
 
@@ -95,7 +95,7 @@
         import { GoogleGenerativeAI } from "@google/generative-ai";
 
         // =========================================================================
-        // ⚙️ CREDENCIAIS (Restauradas conforme solicitação)
+        // ⚙️ CREDENCIAIS (CONFIGURAÇÃO SEGURA)
         // =========================================================================
         const K1 = "AIzaSyA9wFITzU";
         const K2 = "sGHwjmfLO615E";
@@ -103,8 +103,8 @@
         
         const API_KEY = `${K1}${K2}${K3}`; 
         
-        // O ID exato que você informou que funciona
-        const TUNED_MODEL_ID = "projects/246188888920/locations/us-central1/models/980279487348342784@1"; 
+        // ENDPOINT ATUALIZADO (Fornecido pelo usuário)
+        const TUNED_MODEL_ID = "projects/246188888920/locations/us-central1/endpoints/8626564821879357440"; 
         // =========================================================================
 
         let uploadedFiles = [];
@@ -142,7 +142,7 @@
             } catch (e) { console.warn("Maps init error:", e); }
         };
 
-        // --- SISTEMA DE GERAÇÃO (Direto e Reto) ---
+        // --- SISTEMA DE GERAÇÃO ---
         window.generateItinerary = async () => {
             const userPrompt = document.getElementById('user-prompt').value;
             const btn = document.getElementById('send-btn');
@@ -157,7 +157,8 @@
             spinner.classList.remove('hidden');
 
             try {
-                // Instanciando o modelo Tuned com a System Instruction injetada
+                // Instanciando o modelo Tuned com a System Instruction INJETADA
+                // Isso combina o poder do endpoint treinado com as regras da persona
                 const model = genAI.getGenerativeModel({ 
                     model: TUNED_MODEL_ID,
                     systemInstruction: `
@@ -214,7 +215,7 @@
 
             } catch (error) {
                 console.error("Erro na geração:", error);
-                appendError(`Erro ao acessar o Modelo Treinado: ${error.message}.`);
+                appendError(`Erro no Endpoint: ${error.message}. Verifique se o Endpoint está ativo no Google Cloud.`);
             } finally {
                 btn.disabled = false;
                 icon.classList.remove('hidden');
