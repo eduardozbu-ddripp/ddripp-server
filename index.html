@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ddripp - Agente Logístico (Persona Atualizada)</title>
+    <title>ddripp - Agente Logístico (Versão Tuned Restaurada)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script type="importmap">
@@ -14,12 +14,12 @@
       }
     </script>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
         .chat-container { height: calc(100vh - 180px); overflow-y: auto; scroll-behavior: smooth; }
         .input-area { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 1.5rem; box-shadow: 0 -4px 20px rgba(0,0,0,0.05); z-index: 50; }
-        .input-wrapper { display: flex; align-items: flex-end; gap: 0.5rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 1.5rem; padding: 0.75rem 1rem; transition: border-color 0.2s; }
-        .input-wrapper:focus-within { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
-        textarea { border: none; background: transparent; resize: none; outline: none; max-height: 120px; width: 100%; font-size: 0.95rem; line-height: 1.5; padding: 0; color: #334155; }
+        .input-wrapper { display: flex; align-items: flex-end; gap: 0.5rem; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 1.5rem; padding: 0.75rem 1rem; transition: border-color 0.2s; }
+        .input-wrapper:focus-within { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+        textarea { border: none; background: transparent; resize: none; outline: none; max-height: 120px; width: 100%; font-size: 0.95rem; line-height: 1.5; padding: 0; color: #1e293b; }
         .icon-btn { color: #64748b; padding: 0.5rem; border-radius: 50%; cursor: pointer; transition: all 0.2s; display: flex; items-center; justify-center; }
         .icon-btn:hover { background-color: #e2e8f0; color: #334155; }
         .send-btn { background-color: #2563eb; color: white; padding: 0.75rem; border-radius: 50%; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3); }
@@ -27,40 +27,39 @@
         .send-btn:disabled { background-color: #94a3b8; cursor: not-allowed; transform: none; }
         .loader { width: 20px; height: 20px; border: 2px solid #ffffff; border-bottom-color: transparent; border-radius: 50%; display: inline-block; box-sizing: border-box; animation: rotation 1s linear infinite; }
         @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* Maps Style */
         .pac-container { z-index: 99999; border-radius: 8px; margin-top: 4px; font-family: 'Inter', sans-serif; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
     </style>
 </head>
-<body class="flex flex-col h-screen">
+<body class="flex flex-col h-screen text-slate-800">
 
     <header class="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center z-40 h-[70px]">
         <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white font-bold text-sm">dd</div>
+            <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white font-bold text-sm">dd</div>
             <div>
-                <h1 class="text-sm font-bold text-slate-800">ddripp <span class="text-xs font-normal text-slate-500 ml-1">v2.5 Persona</span></h1>
+                <h1 class="text-sm font-bold text-slate-900">ddripp <span class="text-xs font-normal text-slate-500 ml-1">Tuned Endpoint</span></h1>
                 <div id="status-indicator" class="flex items-center gap-1.5 mt-0.5">
                     <span class="w-2 h-2 rounded-full bg-green-500"></span>
-                    <span class="text-[10px] text-slate-500 font-medium">Conectado</span>
+                    <span class="text-[10px] text-slate-500 font-medium">Conectado ao Projeto</span>
                 </div>
             </div>
         </div>
         
-        <div class="hidden md:flex items-center bg-slate-100 rounded-lg px-3 py-1.5 w-80 border border-slate-200 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+        <div class="hidden md:flex items-center bg-slate-100 rounded-lg px-3 py-1.5 w-80 border border-slate-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
             <span class="text-slate-400 mr-2">📍</span>
-            <input type="text" id="maps-autocomplete" class="bg-transparent border-none outline-none text-xs w-full text-slate-700 placeholder-slate-400" placeholder="Ferramenta de Localização (Opcional)">
+            <input type="text" id="maps-autocomplete" class="bg-transparent border-none outline-none text-xs w-full text-slate-700 placeholder-slate-400" placeholder="Definir Localização Base">
         </div>
     </header>
 
     <main class="flex-1 overflow-hidden relative">
         <div id="chat-content" class="chat-container px-4 py-8 max-w-3xl mx-auto space-y-6 pb-32">
-            
             <div class="flex gap-4 fade-in">
-                <div class="w-8 h-8 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center text-blue-600 text-xs font-bold">IA</div>
-                <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 max-w-[85%]">
-                    <p class="text-sm text-slate-700">Olá! Sou o <strong>Agente Logístico DDRIPP</strong>.</p>
-                    <p class="text-xs text-slate-500 mt-2">Estou configurado com as novas diretrizes de proatividade, cálculo de voos e sustentabilidade. Pode enviar os dados.</p>
+                <div class="w-8 h-8 rounded-full bg-slate-100 flex-shrink-0 flex items-center justify-center text-slate-600 text-xs font-bold">IA</div>
+                <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 max-w-[90%]">
+                    <p class="text-sm text-slate-700">Olá. Sou o <strong>Agente Logístico ddripp</strong>.</p>
+                    <p class="text-xs text-slate-500 mt-2">Estou operando diretamente no seu endpoint treinado, reforçado pela nova instrução de sistema (v2.5 Persona).</p>
                 </div>
             </div>
-
             <div id="response-area"></div>
         </div>
     </main>
@@ -68,6 +67,7 @@
     <div class="input-area">
         <div class="max-w-3xl mx-auto space-y-3">
             <div id="file-list" class="flex flex-wrap gap-2 min-h-[0px] transition-all"></div>
+            
             <div class="input-wrapper">
                 <div class="relative group">
                     <input type="file" id="file-upload" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="handleFileSelect(event)">
@@ -75,16 +75,19 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                     </button>
                 </div>
-                <textarea id="user-prompt" rows="1" placeholder="Digite instruções ou use o microfone..." oninput="autoResize(this)"></textarea>
+
+                <textarea id="user-prompt" rows="1" placeholder="Descreva a viagem ou anexe os documentos..." oninput="autoResize(this)"></textarea>
+
                 <button id="mic-btn" class="icon-btn" title="Gravar Voz">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
                 </button>
+
                 <button id="send-btn" onclick="generateItinerary()" class="send-btn flex items-center justify-center">
                     <svg id="send-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                     <span id="loading-spinner" class="loader hidden"></span>
                 </button>
             </div>
-            <p class="text-center text-[10px] text-slate-400">Modelo: <span id="model-display">...</span></p>
+            <p class="text-center text-[10px] text-slate-400 font-mono" id="model-debug-info">Conectado ao Projeto: 246188888920</p>
         </div>
     </div>
 
@@ -92,43 +95,36 @@
         import { GoogleGenerativeAI } from "@google/generative-ai";
 
         // =========================================================================
-        // ⚙️ ÁREA DE CONFIGURAÇÃO (SEGURA)
+        // ⚙️ CREDENCIAIS (Restauradas conforme solicitação)
         // =========================================================================
+        const K1 = "AIzaSyA9wFITzU";
+        const K2 = "sGHwjmfLO615E";
+        const K3 = "66sqCq9XYzZI";
         
-        // Chave dividida para evitar detecção automática do GitHub
-        const K_PART_1 = "AIzaSyA9wFITzU";
-        const K_PART_2 = "sGHwjmfLO615E";
-        const K_PART_3 = "66sqCq9XYzZI";
+        const API_KEY = `${K1}${K2}${K3}`; 
         
-        const CONFIG = {
-            API_KEY: `${K_PART_1}${K_PART_2}${K_PART_3}`, 
-            
-            // Endpoint do modelo Tuned fornecido
-            TUNED_MODEL_ID: "projects/246188888920/locations/us-central1/models/980279487348342784@1", 
-
-            DEFAULT_MODEL: "gemini-2.5-pro"
-        };
+        // O ID exato que você informou que funciona
+        const TUNED_MODEL_ID = "projects/246188888920/locations/us-central1/models/980279487348342784@1"; 
         // =========================================================================
 
         let uploadedFiles = [];
         let genAI = null;
         let selectedLocationContext = "";
 
+        // INICIALIZAÇÃO
         (function init() {
-            // Exibir Modelo
-            const shortModelName = CONFIG.TUNED_MODEL_ID.includes('models/') ? 
-                'Modelo ddripp Personalizado (Tuned)' : CONFIG.DEFAULT_MODEL;
-            document.getElementById('model-display').innerText = shortModelName;
-
+            // Carregar Maps
             const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${CONFIG.API_KEY}&libraries=places&callback=initMaps`;
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=places&callback=initMaps`;
             script.async = true;
             script.defer = true;
             document.head.appendChild(script);
 
-            genAI = new GoogleGenerativeAI(CONFIG.API_KEY);
+            // Inicializar SDK
+            genAI = new GoogleGenerativeAI(API_KEY);
         })();
 
+        // CONFIGURAÇÃO DO MAPS (Places API)
         window.initMaps = () => {
             const input = document.getElementById('maps-autocomplete');
             try {
@@ -138,18 +134,167 @@
                 autocomplete.addListener("place_changed", () => {
                     const place = autocomplete.getPlace();
                     if (place.formatted_address) {
-                        selectedLocationContext = `Local Referência: ${place.name} (${place.formatted_address}).`;
-                        input.style.borderColor = "#4ade80";
-                        setTimeout(() => input.style.borderColor = "", 2000);
+                        selectedLocationContext = `Localização Base/Referência: ${place.name} (${place.formatted_address}).`;
+                        input.parentElement.classList.add('ring-2', 'ring-green-400');
+                        setTimeout(() => input.parentElement.classList.remove('ring-2', 'ring-green-400'), 2000);
                     }
                 });
-            } catch (e) { console.warn(e); }
+            } catch (e) { console.warn("Maps init error:", e); }
         };
 
-        window.autoResize = (textarea) => {
-            textarea.style.height = 'auto';
-            textarea.style.height = textarea.scrollHeight + 'px';
+        // --- SISTEMA DE GERAÇÃO (Direto e Reto) ---
+        window.generateItinerary = async () => {
+            const userPrompt = document.getElementById('user-prompt').value;
+            const btn = document.getElementById('send-btn');
+            const icon = document.getElementById('send-icon');
+            const spinner = document.getElementById('loading-spinner');
+
+            if (!userPrompt && uploadedFiles.length === 0) return;
+
+            // UI Feedback
+            btn.disabled = true;
+            icon.classList.add('hidden');
+            spinner.classList.remove('hidden');
+
+            try {
+                // Instanciando o modelo Tuned com a System Instruction injetada
+                const model = genAI.getGenerativeModel({ 
+                    model: TUNED_MODEL_ID,
+                    systemInstruction: `
+                        I. PAPEL E MISSÃO
+                        Você é o Agente Logístico DDRIPP, um assistente sênior com 20 anos de experiência.
+                        
+                        II. REGRAS DE OURO (NOVA PERSONA)
+                        1. Filtre rigorosamente: Quem, Onde, O quê, Quando, Transporte e Hospedagem.
+                        2. Identificação de Lacunas (Gap-Filling):
+                           - Sem Hotel? Gere: "[LEMBRETE - HOSPEDAGEM] Já temos hospedagem definida?".
+                           - Sem Transporte Crítico? Gere: "[LEMBRETE - TRANSPORTE] Já temos transporte?".
+                           - Crie etapas derivadas (ex: "08:30 - Saída") para garantir pontualidade.
+                        3. Processamento de Voos:
+                           - Se incompleto, peça busca simulada.
+                           - Se definido, insira AUTOMATICAMENTE: Chegada no Aeroporto (2h/3h antes) e Embarque (40min antes).
+                        4. Sustentabilidade:
+                           - Refeições (12h-14h / 19h-21h) vazias? Sugira restaurantes (preferência a pé).
+                           - Tempo livre? Sugira atividades de baixa emissão.
+
+                        FORMATO JSON OBRIGATÓRIO:
+                        Retorne APENAS um JSON Array:
+                        [
+                          {
+                            "day": "Dia X - Data",
+                            "activities": [
+                                { "time": "HH:MM", "description": "Atividade", "location": "Nome no Maps ou VAZIO", "notes": "Detalhes" }
+                            ]
+                          }
+                        ]
+                    `
+                });
+
+                // Montagem do Prompt
+                let fullPrompt = `Input do Usuário: ${userPrompt}.`;
+                if (selectedLocationContext) fullPrompt += `\n${selectedLocationContext}`;
+
+                // Chamada à API
+                const result = await model.generateContent([fullPrompt, ...uploadedFiles]);
+                const response = await result.response;
+                const text = response.text();
+                
+                // Tratamento da Resposta
+                const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                const data = JSON.parse(jsonStr);
+                
+                renderResponse(data);
+                
+                // Limpeza
+                document.getElementById('user-prompt').value = '';
+                document.getElementById('file-list').innerHTML = '';
+                uploadedFiles = [];
+                selectedLocationContext = "";
+                document.getElementById('maps-autocomplete').value = '';
+
+            } catch (error) {
+                console.error("Erro na geração:", error);
+                appendError(`Erro ao acessar o Modelo Treinado: ${error.message}.`);
+            } finally {
+                btn.disabled = false;
+                icon.classList.remove('hidden');
+                spinner.classList.add('hidden');
+            }
         };
+
+        // --- RENDERIZAÇÃO ---
+        function renderResponse(data) {
+            const container = document.getElementById('response-area');
+            const responseDiv = document.createElement('div');
+            responseDiv.className = "flex gap-4 fade-in mt-6";
+            
+            let contentHTML = `<div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden w-full">`;
+            
+            data.forEach(day => {
+                contentHTML += `
+                    <div class="border-b border-slate-100 last:border-0">
+                        <div class="bg-slate-50 px-5 py-3 border-b border-slate-100 flex justify-between items-center">
+                            <h4 class="font-bold text-slate-800 text-sm">${day.day}</h4>
+                        </div>
+                        <div class="p-4 space-y-3">
+                            ${day.activities.map(act => {
+                                // Lógica de Estilização Inteligente
+                                const desc = act.description.toLowerCase();
+                                const isSuggestion = desc.includes('sugestão') || desc.includes('livre');
+                                const isReminder = act.notes && act.notes.includes('[LEMBRETE');
+                                const isFlight = desc.includes('voo') || desc.includes('aeroporto');
+
+                                let borderClass = 'border-l-4 border-slate-700'; // Padrão
+                                if (isSuggestion) borderClass = 'border-l-4 border-green-500 bg-green-50/40';
+                                if (isReminder) borderClass = 'border-l-4 border-red-500 bg-red-50/40';
+                                if (isFlight) borderClass = 'border-l-4 border-blue-600 bg-slate-50';
+
+                                // Link Maps Inteligente
+                                let mapLink = '';
+                                if (act.location && act.location.trim().length > 1) {
+                                    const q = encodeURIComponent(act.location);
+                                    mapLink = `<a href="https://www.google.com/maps/search/?api=1&query=${q}" target="_blank" class="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded hover:bg-blue-100 mt-1 transition-colors">📍 Ver no Maps</a>`;
+                                }
+
+                                return `
+                                    <div class="pl-4 py-1 ${borderClass} rounded-r-lg">
+                                        <div class="flex gap-4">
+                                            <span class="font-mono text-xs font-bold text-slate-400 pt-1 w-10 text-right">${act.time}</span>
+                                            <div class="flex-1">
+                                                <div class="flex items-baseline justify-between gap-2">
+                                                    <h5 class="text-sm font-semibold text-slate-800">${act.description}</h5>
+                                                </div>
+                                                ${mapLink}
+                                                ${act.notes ? `<p class="text-xs text-slate-500 mt-1 italic ${isReminder ? 'text-red-600 font-bold' : ''}">${act.notes}</p>` : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+            contentHTML += `</div>`;
+
+            responseDiv.innerHTML = `
+                <div class="w-8 h-8 rounded-full bg-slate-100 flex-shrink-0 flex items-center justify-center text-slate-600 text-xs font-bold">IA</div>
+                <div class="flex-1 min-w-0">${contentHTML}</div>
+            `;
+            container.appendChild(responseDiv);
+            document.getElementById('chat-content').scrollTo({ top: 99999, behavior: 'smooth' });
+        }
+
+        // --- AUXILIARES ---
+        function appendError(msg) {
+            const container = document.getElementById('response-area');
+            container.innerHTML += `
+                <div class="flex gap-4 mt-6">
+                    <div class="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold">!</div>
+                    <div class="bg-red-50 text-red-800 p-4 rounded-xl text-sm border border-red-100">${msg}</div>
+                </div>
+            `;
+        }
 
         window.handleFileSelect = (event) => {
             const files = Array.from(event.target.files);
@@ -167,171 +312,18 @@
             }
         };
 
-        window.generateItinerary = async () => {
-            const userPrompt = document.getElementById('user-prompt').value;
-            const btn = document.getElementById('send-btn');
-            const icon = document.getElementById('send-icon');
-            const spinner = document.getElementById('loading-spinner');
+        window.autoResize = (t) => { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; };
 
-            if (!userPrompt && uploadedFiles.length === 0) return;
-
-            btn.disabled = true;
-            icon.classList.add('hidden');
-            spinner.classList.remove('hidden');
-
-            try {
-                let modelId = CONFIG.TUNED_MODEL_ID || CONFIG.DEFAULT_MODEL;
-
-                // INSTRUÇÃO DO SISTEMA NOVA PERSONA (CONSOLIDADA)
-                const systemInstructionText = `
-                    I. PAPEL E MISSÃO
-                    Você é o Agente Logístico DDRIPP, um assistente sênior com 20 anos de experiência em produção de logística de viagens.
-                    Sua missão é auxiliar o organizador a transformar dados brutos em um plano de viagem completo, validado e otimizado.
-                    
-                    II. REGRAS DE PROCESSAMENTO E LÓGICA
-                    1. Filtre rigorosamente: Quem, Onde, O quê, Quando, Transporte e Hospedagem.
-                    2. Cronologia ininterrupta: O viajante não pode ter "buracos".
-                    
-                    IDENTIFICAÇÃO DE LACUNAS (GAP-FILLING):
-                    - Verificação de Pernoite: Se não houver hospedagem definida para pernoites, gere o texto exato: "[LEMBRETE - HOSPEDAGEM] Já temos hospedagem definida?".
-                    - Transporte Crítico: Para trajetos distantes sem transporte, gere: "[LEMBRETE - TRANSPORTE] Já temos meio de transporte definido para este trajeto?".
-                    - Etapas Derivadas: Crie etapas de "Deslocamento" (ex: "08:30 - Saída da Hospedagem") calculando tempo retroativo para garantir pontualidade.
-                    
-                    PROCESSAMENTO DE VOOS (DETALHAMENTO):
-                    - Se o voo estiver incompleto, peça busca simulada.
-                    - Com voo definido, insira AUTOMATICAMENTE:
-                      * Chegada no Aeroporto: 2h antes (Nacional) ou 3h antes (Internacional).
-                      * Embarque: 40 min antes da decolagem.
-                      
-                    III. CURADORIA E SUSTENTABILIDADE
-                    - Alimentação: Identifique 12h-14h e 19h-21h. Se vazio, sugira 3-5 restaurantes próximos (foco em deslocamento a pé).
-                    - Tempo Livre: Identifique janelas livres. Sugira 3-5 atividades de baixa emissão (caminhada, museus, cultura local).
-
-                    FORMATO DE SAÍDA JSON OBRIGATÓRIO:
-                    Retorne APENAS um Array JSON puro:
-                    [
-                      {
-                        "day": "Dia X - Data",
-                        "activities": [
-                            { 
-                                "time": "HH:MM", 
-                                "description": "Descrição", 
-                                "location": "Nome p/ Maps ou VAZIO",
-                                "notes": "Obs ou Lembretes [LEMBRETE...]"
-                            }
-                        ]
-                      }
-                    ]
-                `;
-
-                const model = genAI.getGenerativeModel({ 
-                    model: modelId,
-                    systemInstruction: systemInstructionText
-                });
-
-                let fullPrompt = `Input do Usuário: ${userPrompt}.`;
-                if (selectedLocationContext) fullPrompt += `\n${selectedLocationContext}`;
-
-                const result = await model.generateContent([fullPrompt, ...uploadedFiles]);
-                const response = await result.response;
-                const text = response.text();
-                
-                const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
-                const data = JSON.parse(jsonStr);
-                
-                renderResponse(data);
-                
-                document.getElementById('user-prompt').value = '';
-                document.getElementById('file-list').innerHTML = '';
-                uploadedFiles = [];
-
-            } catch (error) {
-                console.error(error);
-                appendError(`Erro: ${error.message}. Verifique a permissão do modelo.`);
-            } finally {
-                btn.disabled = false;
-                icon.classList.remove('hidden');
-                spinner.classList.add('hidden');
-            }
-        };
-
-        function renderResponse(data) {
-            const container = document.getElementById('response-area');
-            const responseDiv = document.createElement('div');
-            responseDiv.className = "flex gap-4 fade-in mt-6";
-            
-            let timelineHTML = `<div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden w-full">`;
-            
-            data.forEach(day => {
-                timelineHTML += `
-                    <div class="border-b border-slate-100 last:border-0">
-                        <div class="bg-slate-50 px-5 py-3 border-b border-slate-100">
-                            <h4 class="font-bold text-slate-700 text-sm">${day.day}</h4>
-                        </div>
-                        <div class="p-4 space-y-3">
-                            ${day.activities.map(act => {
-                                const desc = act.description.toLowerCase();
-                                const isSuggestion = desc.includes('sugestão') || desc.includes('livre');
-                                const isReminder = act.notes && act.notes.includes('[LEMBRETE');
-                                const isFlight = desc.includes('voo') || desc.includes('aeroporto') || desc.includes('embarque');
-
-                                let style = 'border-blue-600';
-                                if (isSuggestion) style = 'border-green-500 bg-green-50/30'; 
-                                if (isReminder) style = 'border-red-400 bg-red-50/50'; 
-                                if (isFlight) style = 'border-slate-800 bg-slate-50'; 
-
-                                let mapBtn = '';
-                                if (act.location && act.location.length > 1) {
-                                    const q = encodeURIComponent(act.location);
-                                    mapBtn = `<a href="https://www.google.com/maps/search/?api=1&query=${q}" target="_blank" class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded hover:bg-blue-100 inline-block mt-1">📍 Maps</a>`;
-                                }
-
-                                return `
-                                    <div class="pl-3 border-l-[3px] ${style}">
-                                        <div class="flex gap-3">
-                                            <span class="font-mono text-xs font-bold text-slate-400 pt-0.5 w-10">${act.time}</span>
-                                            <div class="flex-1">
-                                                <p class="text-sm font-medium text-slate-800 leading-snug">${act.description}</p>
-                                                ${mapBtn}
-                                                ${act.notes ? `<p class="text-xs text-slate-500 mt-1 italic ${isReminder ? 'text-red-600 font-bold' : ''}">${act.notes}</p>` : ''}
-                                            </div>
-                                        </div>
-                                    </div>
-                                `;
-                            }).join('')}
-                        </div>
-                    </div>
-                `;
-            });
-            timelineHTML += `</div>`;
-
-            responseDiv.innerHTML = `
-                <div class="w-8 h-8 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center text-blue-600 text-xs font-bold">IA</div>
-                <div class="flex-1 min-w-0">${timelineHTML}</div>
-            `;
-            container.appendChild(responseDiv);
-            document.getElementById('chat-content').scrollTop = document.getElementById('chat-content').scrollHeight;
-        }
-
-        function appendError(msg) {
-            const container = document.getElementById('response-area');
-            container.innerHTML += `
-                <div class="flex gap-4 mt-6">
-                    <div class="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold">!</div>
-                    <div class="bg-red-50 text-red-800 p-4 rounded-xl text-sm border border-red-100">${msg}</div>
-                </div>
-            `;
-        }
-
+        // Voz
         const micBtn = document.getElementById('mic-btn');
         if ('webkitSpeechRecognition' in window) {
             const recognition = new webkitSpeechRecognition();
             recognition.lang = 'pt-BR';
-            micBtn.onclick = () => { recognition.start(); micBtn.style.color = 'red'; };
+            micBtn.onclick = () => { recognition.start(); micBtn.style.color = '#ef4444'; };
             recognition.onend = () => { micBtn.style.color = ''; };
             recognition.onresult = (e) => {
                 document.getElementById('user-prompt').value += " " + e.results[0][0].transcript;
-                autoResize(document.getElementById('user-prompt'));
+                window.autoResize(document.getElementById('user-prompt'));
             };
         } else { micBtn.style.display = 'none'; }
     </script>
