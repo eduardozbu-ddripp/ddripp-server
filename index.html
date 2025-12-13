@@ -3,18 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ddripp - Digital Roadbook (V54 System Fix)</title>
+    <title>ddripp - Digital Roadbook (V57 PDF Reader)</title>
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✈️</text></svg>">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- PDF.js para Ler PDFs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+    </script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <script>
-        // Chaves de API (Mantidas do original)
+        // Chaves de API
         var k1 = "AIzaSyA9wFITzUsGHwj";
         var k2 = "mfLO615E66sqCq9XYzZI";
         window.API_KEY_FINAL = k1 + k2;
@@ -41,7 +48,7 @@
         };
     </script>
 
-    <!-- Carregamento do Google Maps com tratamento de erro e callback -->
+    <!-- Google Maps Loader -->
     <script>
         (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({key: window.API_KEY_FINAL, v: "weekly"});
     </script>
@@ -73,12 +80,10 @@
         a.map-link { color: #2563eb; text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 4px; }
         a.map-link:hover { text-decoration: underline; }
         
-        /* Debug Console */
         #debug-console::-webkit-scrollbar { width: 6px; }
         #debug-console::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
 
-        /* CORREÇÃO DO GOOGLE MAPS AUTOCOMPLETE NO MODAL */
-        /* Z-Index alto para garantir que apareça sobre o modal */
+        /* Maps Autocomplete Styles */
         .pac-container {
             z-index: 10500 !important; 
             border-radius: 0 0 12px 12px;
@@ -86,16 +91,9 @@
             border: 1px solid #e5e7eb;
             font-family: 'Inter', sans-serif;
         }
-        .pac-item {
-            padding: 10px;
-            cursor: pointer;
-        }
-        .pac-item:hover {
-            background-color: #f3f4f6;
-        }
-        .pac-icon {
-            display: none; /* Opcional: remover ícones padrão para visual mais limpo */
-        }
+        .pac-item { padding: 10px; cursor: pointer; }
+        .pac-item:hover { background-color: #f3f4f6; }
+        .pac-icon { display: none; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -112,7 +110,7 @@
         <div id="initial-view" class="flex flex-col items-center justify-center min-h-[70vh]">
              <header class="text-center mb-10">
                 <h1 class="text-6xl font-bold text-gray-900 tracking-tighter">ddripp</h1>
-                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V54</p>
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V57</p>
             </header>
             
             <div class="bg-white p-6 rounded-2xl card-shadow w-full shadow-lg border border-gray-100 relative">
@@ -127,19 +125,16 @@
                         GERAR ROTEIRO
                     </button>
                 </div>
-                <input type="file" id="file-upload" class="hidden" accept=".pdf,image/*,application/pdf" multiple onchange="handleFileSelect(this)">
+                <input type="file" id="file-upload" class="hidden" accept=".pdf" multiple onchange="handleFileSelect(this)">
                 <div id="file-preview-container" class="hidden flex flex-wrap gap-2 mt-4 p-2 bg-gray-50 rounded-lg"></div>
             </div>
         </div>
 
-        <!-- Gap Filling View (Modal de Perguntas) -->
+        <!-- Gap Filling View -->
         <div id="gap-filling-view" class="hidden fixed inset-0 bg-white z-50 p-8 flex flex-col items-center justify-center">
             <div class="w-full max-w-md text-center">
                 <h3 id="gap-question" class="font-bold text-2xl mb-8 text-gray-800"></h3>
-                
-                <!-- Input único que serve para Texto, Data e Autocomplete do Maps -->
                 <input type="text" id="gap-input" class="w-full p-4 border-b-2 border-gray-300 focus:border-blue-600 outline-none text-xl mb-8 bg-transparent transition-colors" placeholder="Digite sua resposta...">
-                
                 <button onclick="handleGapInput()" class="w-full bg-black text-white font-bold py-4 rounded-full hover:bg-gray-800 transition shadow-lg transform active:scale-95">Confirmar</button>
             </div>
         </div>
@@ -149,13 +144,10 @@
             <div class="bg-white p-6 rounded-2xl w-full max-w-lg shadow-2xl relative">
                 <h3 class="font-bold text-xl mb-1 text-gray-900">Selecione o Voo</h3>
                 <p class="text-sm text-gray-500 mb-4">Encontramos estas opções para <span id="flight-route-display"></span>:</p>
-                
                 <div id="flight-options-list" class="space-y-3 max-h-[50vh] overflow-y-auto mb-4"></div>
-                
                 <a id="google-flights-link" href="#" target="_blank" class="block w-full text-center border border-gray-200 text-blue-600 font-medium py-3 rounded-xl hover:bg-blue-50 transition mb-4">
                     <i class="fas fa-external-link-alt mr-2"></i> Ver Voos Reais no Google
                 </a>
-
                 <div class="pt-4 border-t border-gray-100 flex justify-end">
                     <button onclick="confirmFlightSelection()" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-xl hover:bg-blue-700 transition shadow-lg">Confirmar Seleção</button>
                 </div>
@@ -169,7 +161,6 @@
                 <div id="header-loader" class="absolute inset-0 flex items-center justify-center bg-gray-50 z-0">
                     <span class="text-gray-400 text-sm animate-pulse">Carregando capa...</span>
                 </div>
-                
                 <div class="header-content mt-16 relative z-10">
                     <h2 id="trip-title" class="text-4xl font-extrabold text-gray-900 mb-2 leading-tight text-shadow-white"></h2>
                     <div class="flex flex-wrap items-center gap-3 text-gray-600 mb-4 bg-white/60 backdrop-blur-md inline-flex px-4 py-2 rounded-full shadow-sm border border-white/50">
@@ -211,11 +202,8 @@
         var selectedFlightActivityIndex = -1; 
         var selectedFiles = []; 
         var destinationImageUrl = "";
-        
-        // --- VARIÁVEL PARA INSTÂNCIA DO AUTOCOMPLETE ---
         var currentAutocomplete = null;
 
-        // --- DEFININDO FUNÇÕES AUXILIARES PRIMEIRO ---
         function renderFilePreviews() {
             var container = document.getElementById('file-preview-container');
             container.innerHTML = '';
@@ -224,10 +212,25 @@
                 container.innerHTML += `<div class="file-badge"><i class="fas fa-file-alt mr-2"></i>${file.name} <button onclick="removeFile(${index})" class="ml-2 text-red-500 hover:text-red-700 font-bold">×</button></div>`;
             });
         }
+        function removeFile(index) { selectedFiles.splice(index, 1); renderFilePreviews(); }
 
-        function removeFile(index) { 
-            selectedFiles.splice(index, 1); 
-            renderFilePreviews(); 
+        // --- PDF EXTRACTION FUNCTION ---
+        async function readPdfText(file) {
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                let fullText = "";
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const pageText = textContent.items.map(item => item.str).join(" ");
+                    fullText += `\n--- Pág ${i} ---\n${pageText}`;
+                }
+                return fullText;
+            } catch (e) {
+                console.error(e);
+                throw new Error("Falha ao ler o PDF.");
+            }
         }
 
         // --- CORE: CHAMADA AO ENDPOINT ---
@@ -242,17 +245,16 @@
                 const data = await response.json();
                 if (data.error) throw new Error(data.error);
                 window.logToScreen("SUCESSO: O modelo treinado respondeu!", 'success');
-                const resultText = data.text;
                 try {
-                    const cleanJson = resultText.replace(/```json/g, "").replace(/```/g, "").trim();
+                    const cleanJson = data.text.replace(/```json/g, "").replace(/```/g, "").trim();
                     return JSON.parse(cleanJson);
                 } catch (e) {
-                    console.error("Erro JSON:", resultText);
+                    console.error("Erro JSON:", data.text);
                     throw new Error("O modelo respondeu, mas não em JSON válido.");
                 }
             } catch (err) {
                 window.logToScreen(`Falha Crítica: ${err.message}`, 'error');
-                alert(`Erro ao conectar com seu modelo: ${err.message}`);
+                alert(`Erro ao conectar: ${err.message}`);
                 throw err;
             }
         }
@@ -281,7 +283,6 @@
             
             for (var i = 0; i < tripData.activities.length; i++) {
                 var curr = tripData.activities[i];
-                // Lógica de Voo
                 if (curr.type === 'travel' && curr.destinationAirport && curr.flightNumber) {
                     newActivities.push(curr);
                     var arrivalTime = addTime(curr.time, curr.flightDurationMinutes || 120);
@@ -308,7 +309,6 @@
                     }
                     continue;
                 }
-                // Lógica de Deslocamento
                 if (curr.location) {
                     var cleanedLast = lastKnownLocation ? lastKnownLocation.split(' para ')[lastKnownLocation.split(' para ').length - 1] : null;
                     if (cleanedLast && curr.location !== cleanedLast && !curr.description.includes(cleanedLast)) {
@@ -336,15 +336,11 @@
             if (flightIndex !== -1) {
                 selectedFlightActivityIndex = flightIndex;
                 var activity = tripData.activities[flightIndex];
-                
-                var options = activity.flightOptions;
-                if (!options || options.length === 0) {
-                    options = [
-                        { airline: "Opção A (Manhã)", flightNumber: "08:00", time: "08:00", origin: activity.originAirport || "Origem", destination: activity.destinationAirport || "Destino", durationMinutes: 120 },
-                        { airline: "Opção B (Tarde)", flightNumber: "14:00", time: "14:00", origin: activity.originAirport || "Origem", destination: activity.destinationAirport || "Destino", durationMinutes: 120 },
-                        { airline: "Opção C (Noite)", flightNumber: "20:00", time: "20:00", origin: activity.originAirport || "Origem", destination: activity.destinationAirport || "Destino", durationMinutes: 120 }
-                    ];
-                }
+                var options = activity.flightOptions || [
+                    { airline: "Opção A (Manhã)", flightNumber: "08:00", time: "08:00", origin: activity.originAirport || "Origem", destination: activity.destinationAirport || "Destino", durationMinutes: 120 },
+                    { airline: "Opção B (Tarde)", flightNumber: "14:00", time: "14:00", origin: activity.originAirport || "Origem", destination: activity.destinationAirport || "Destino", durationMinutes: 120 },
+                    { airline: "Opção C (Noite)", flightNumber: "20:00", time: "20:00", origin: activity.originAirport || "Origem", destination: activity.destinationAirport || "Destino", durationMinutes: 120 }
+                ];
                 openFlightSelectionModal(options, activity);
                 return true; 
             }
@@ -354,7 +350,6 @@
         function openFlightSelectionModal(options, activity) {
             var list = document.getElementById('flight-options-list');
             list.innerHTML = '';
-            
             var flightDate = activity.date; 
             var flightLink = `https://www.google.com/travel/flights?q=Flights%20to%20${activity.destinationAirport}%20from%20${activity.originAirport}%20on%20${flightDate}`;
             document.getElementById('google-flights-link').href = flightLink;
@@ -399,11 +394,14 @@
                 delete activity.flightOptions;
             } else {
                 var idx = parseInt(selected.value);
-                var options = activity.flightOptions || [
+                var options = activity.flightOptions; // Usar as opções originais se existirem
+                if (!options) { // Fallback para opções mockadas
+                   options = [
                         { airline: "Opção A", flightNumber: "08:00", time: "08:00" },
                         { airline: "Opção B", flightNumber: "14:00", time: "14:00" },
                         { airline: "Opção C", flightNumber: "20:00", time: "20:00" }
                     ];
+                }
                 var opt = options[idx];
                 activity.time = opt.time;
                 activity.airline = opt.airline.split(' ')[0];
@@ -429,40 +427,45 @@
             return false;
         }
 
-        // --- HANDLERS PRINCIPAIS ---
+        // --- HANDLERS PRINCIPAIS ATUALIZADOS PARA LER PDF ---
         async function handleInitialInput() {
             var inputEl = document.getElementById('initial-input');
             var inputVal = inputEl.value;
+            
             if ((!inputVal || inputVal.trim() === "") && selectedFiles.length === 0) return alert('Por favor, diga algo ou anexe um arquivo.');
-            showLoader('Consultando Modelo Fine-Tuned...');
+            
+            showLoader('Lendo arquivos e Consultando IA...');
+            
+            // --- EXTRAÇÃO DE CONTEÚDO DOS ARQUIVOS ---
+            let fileContents = "";
+            for (let file of selectedFiles) {
+                if (file.type === "application/pdf") {
+                    try {
+                        const text = await readPdfText(file);
+                        fileContents += `\n[CONTEÚDO DO ARQUIVO PDF "${file.name}"]: \n${text}\n`;
+                    } catch (e) {
+                        alert(`Erro ao ler o arquivo ${file.name}. Tente novamente.`);
+                    }
+                } else {
+                    fileContents += `\n[ARQUIVO ANEXADO]: ${file.name} (Aviso: Apenas PDFs de texto são lidos completamente por esta versão)\n`;
+                }
+            }
+
             var today = new Date().toLocaleDateString('pt-BR');
             
-            // --- INSTRUÇÃO DO SISTEMA ATUALIZADA (NOVA PERSONA) ---
+            // --- PROMPT COM CONTEÚDO DO ARQUIVO INCLUÍDO ---
             var masterPrompt = `INSTRUÇÃO DO SISTEMA: AGENTE LOGÍSTICO DRIPP (Assistente de Organização de Viagens)
 I. PAPEL E MISSÃO
-Você é o Agente Logístico DDRIPP, um assistente sênior com 20 anos de experiência em produção de logística de viagens (curtas, longas, solo, grupo, nacionais ou internacionais). Sua missão é auxiliar o organizador de viagens (o usuário) a transformar uma coleção de dados brutos e fragmentados em um plano de viagem completo, impecável, validado e otimizado, que cubra o viajante em tempo integral, da partida ao retorno.
-II. REGRAS DE PROCESSAMENTO DE DADOS E LÓGICA (Consolidação e Proatividade)
-Análise de Input Bruto: Você deve analisar o input do usuário, independentemente do seu formato. Filtre rigorosamente os elementos cruciais para a logística: Quem, Onde, O quê, Quando, Meio de Transporte e Hospedagem.
-Organização e Cronologia: Reestruture todo o material filtrado em uma sequência lógica, cronológica e ininterrupta por dia. O viajante não pode ter "buracos" no roteiro.
-Identificação e Preenchimento de Lacunas (Gap-Filling Interativo):
-Verificação de Pernoite: Para viagens que exigem pernoite, verifique se há uma hospedagem definida. Se não houver, gere a seguinte instrução formatada para acionar um pop-up de lembrete no aplicativo:
-"missingCriticalInfo": "[LEMBRETE - HOSPEDAGEM] Já temos hospedagem definida?"
-A resposta deve guiar o app para preencher a informação na lacuna.
-Verificação de Distância e Transporte: Para atividades distantes ou transições logísticas críticas (como aeroporto/hotel), garanta que um meio de transporte adequado esteja definido. Caso contrário, gere a seguinte instrução formatada para acionar um pop-up de lembrete:
-[LEMBRETE - TRANSPORTE] Já temos meio de transporte definido para este trajeto? (Use transport: "ASK_USER" no json).
-Criação de Etapas Derivadas (Proatividade Logística): Você deve gerar e inserir novas etapas de "Deslocamento" baseadas em consultas ao Google Maps para programar o horário de saída e a pontualidade.
-Exemplo: Se o input define um "Compromisso às 09:00" e a "Hospedagem", use o tempo de deslocamento (ex. 15min) para calcular e inserir uma atividade anterior como: 08:30 - Saída da Hospedagem.
-Processamento de Voos (Validação e Detalhamento):
-Validação de Dados: Se as informações de voo estiverem incompletas (falta data, aeroporto de partida/chegada, Cia, número do voo, horário), o sistema deve solicitar uma busca no Google Flights (simulando a função da API de busca).
-Sugestão e Escolha: Apresente 3 opções de voos coerentes com as características informadas (ex: [VOOS ENCONTRADOS] Opção 1, Opção 2, Opção 3) no array 'flightOptions'.
-Detalhamento Logístico: A partir do voo informado e definitivo, crie e insira no cronograma etapas detalhadas no formato de menu dropdown.
-III. REGRAS DE CURADORIA (Diferencial de Baixa Emissão de Carbono)
-Alimentação Local e Otimizada: Identifique o horário de almoço e/ou jantar no cronograma.
-Sugestão Padrão: Crie uma lista de 3-5 sugestões de restaurantes próximos ao destino da atividade atual.
-Atividades de Baixa Emissão: Reconheça o "Tempo Livre" no cronograma.
+Você é o Agente Logístico DDRIPP.
+II. REGRAS DE PROCESSAMENTO DE DADOS E LÓGICA
+Análise de Input: Analise o input do usuário E o conteúdo dos arquivos anexados. Extraia todas as atividades, voos e horários presentes no texto do arquivo.
+IV. GERAÇÃO AUTOMÁTICA (Modo Criativo & Leitura de Arquivo)
+- Se houver dados de atividades no arquivo, use-os PRIORITARIAMENTE para montar o cronograma exato.
+- Se o input for pobre e o arquivo estiver vazio, crie um roteiro sugerido (Modo Criativo).
 
 [DATA ATUAL DO SISTEMA]: ${today}
-[INPUT DO USUÁRIO]: "${inputVal}"`;
+[INPUT DO USUÁRIO]: "${inputVal}"
+${fileContents}`;
 
             var schemaStructure = {
                 type: "OBJECT",
@@ -549,30 +552,25 @@ Atividades de Baixa Emissão: Reconheça o "Tempo Livre" no cronograma.
             var input = document.getElementById('gap-input');
             input.value = '';
             
-            // Desconectar o Autocomplete anterior se existir
-            // Clonamos o nó para remover todos os event listeners antigos do Autocomplete
             var newInput = input.cloneNode(true);
             input.parentNode.replaceChild(newInput, input);
-            input = newInput; // Atualiza a referência
+            input = newInput; 
             currentAutocomplete = null;
 
             if (q.type === 'location') {
                 input.type = 'text';
                 input.placeholder = "Digite o local...";
                 
-                // Inicializar Autocomplete Clássico do Google Maps
                 google.maps.importLibrary("places").then(() => {
                     currentAutocomplete = new google.maps.places.Autocomplete(input, {
                         fields: ["formatted_address", "name", "geometry"],
                         strictBounds: false,
                     });
 
-                    // Listener para quando o usuário seleciona um lugar
                     currentAutocomplete.addListener("place_changed", () => {
                         const place = currentAutocomplete.getPlace();
                         if (place.formatted_address || place.name) {
                             input.value = place.formatted_address || place.name;
-                            // Opcional: Auto-confirmar? Por enquanto deixamos o usuário clicar para confirmar
                         }
                     });
                 });
@@ -600,7 +598,7 @@ Atividades de Baixa Emissão: Reconheça o "Tempo Livre" no cronograma.
                 tripData.activities[idx].transport = val;
                 tripData.activities[idx].description += " (" + val + ")";
             } else if (missingInfoQueue[0].key === 'general_gap') {
-                 // Apenas continua, assumindo que foi resolvido ou é info extra
+                 // Info extra, não faz nada específico
             } else {
                 tripData[missingInfoQueue[0].key] = val;
             }
@@ -617,7 +615,6 @@ Atividades de Baixa Emissão: Reconheça o "Tempo Livre" no cronograma.
         function generateItinerary() {
             document.getElementById('initial-view').classList.add('hidden');
             document.getElementById('itinerary-view').classList.remove('hidden');
-            // document.getElementById('fixed-footer-input').classList.remove('hidden'); // Comentado pois não existe no HTML original
             document.getElementById('trip-title').textContent = tripData.tripObjective || ("Viagem para " + tripData.destination);
             document.getElementById('trip-destination').textContent = tripData.destination;
             var wikiLink = document.getElementById('trip-destination-link');
@@ -648,7 +645,6 @@ Atividades de Baixa Emissão: Reconheça o "Tempo Livre" no cronograma.
                         '<div class="bg-white rounded-2xl card-shadow overflow-hidden">';
                     days[date].forEach(function(act) {
                         
-                        // COLUNA 2: PESSOA
                         var personTag = '<div class="text-center"><span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-full w-full block truncate border border-blue-100">' + (act.person || 'Todos') + '</span></div>';
 
                         if (act.type === 'travel' && act.flightNumber) { 
@@ -657,7 +653,6 @@ Atividades de Baixa Emissão: Reconheça o "Tempo Livre" no cronograma.
                             var arrivalAirportTime = subtractTime(flightTime, 120); 
                             var duration = act.flightDurationMinutes || 120; 
                             var landingTime = addTime(flightTime, duration);
-                            var transferTime = addTime(landingTime, 30);
                             
                             htmlContent += '<details class="group border-b border-gray-50 last:border-0">' +
                                 '<summary class="p-4 hover:bg-gray-50 transition last:border-0 list-none">' +
@@ -690,7 +685,6 @@ Atividades de Baixa Emissão: Reconheça o "Tempo Livre" no cronograma.
                                 var mapQuery = encodeURIComponent(act.location);
                                 var urlMap = 'https://www.google.com/maps/dir/?api=1&destination=' + mapQuery;
                                 if(act.location.includes("para")) {
-                                    // Link de rota
                                     var parts = act.location.split("para");
                                     urlMap = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(parts[0])}&destination=${encodeURIComponent(parts[1])}&travelmode=driving`;
                                 }
@@ -767,7 +761,7 @@ Atividades de Baixa Emissão: Reconheça o "Tempo Livre" no cronograma.
         function handleFileSelect(input) { 
             var files = Array.from(input.files);
             if (!files.length) return;
-            selectedFiles = files; // Simplificado para este exemplo
+            selectedFiles = files; 
             renderFilePreviews();
         }
         async function handleAdjustmentInput() { alert('Ajuste simulado.'); }
