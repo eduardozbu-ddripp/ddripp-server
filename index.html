@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ddripp - Digital Roadbook (V53 Final Fix)</title>
+    <title>ddripp - Digital Roadbook (V54 System Fix)</title>
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✈️</text></svg>">
 
@@ -14,13 +14,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <script>
+        // Chaves de API (Mantidas do original)
         var k1 = "AIzaSyA9wFITzUsGHwj";
         var k2 = "mfLO615E66sqCq9XYzZI";
         window.API_KEY_FINAL = k1 + k2;
         window.ENDPOINT_URL = "https://generateroadbook-swx7ffu2ra-uc.a.run.app"; 
         var SERVER_SHARE_URL = "https://ddripp-server.onrender.com/share"; 
 
-        // UTILITÁRIOS GLOBAIS (Definidos no topo para evitar ReferenceError)
+        // UTILITÁRIOS GLOBAIS
         window.logToScreen = function(msg, type = 'info') {
             const consoleEl = document.getElementById('debug-console');
             if(!consoleEl) return;
@@ -40,6 +41,7 @@
         };
     </script>
 
+    <!-- Carregamento do Google Maps com tratamento de erro e callback -->
     <script>
         (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({key: window.API_KEY_FINAL, v: "weekly"});
     </script>
@@ -48,15 +50,17 @@
         body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; color: #1f2937; }
         .card-shadow { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05); }
         
-        /* 3 COLUNAS MANTIDAS */
+        /* Layout Grid */
         .itinerary-grid { display: grid; grid-template-columns: 70px 90px 1fr; gap: 1rem; align-items: start; padding: 1.25rem; border-bottom: 1px solid #f3f4f6; }
         @media (max-width: 640px) { .itinerary-grid { grid-template-columns: 50px 70px 1fr; gap: 0.5rem; padding: 1rem; font-size: 0.9rem; } }
         
+        /* Cabeçalho e Imagens */
         #trip-header { position: relative; overflow: hidden; min-h: 240px; display: flex; flex-direction: column; justify-content: flex-end; }
         #header-bg-image { position: absolute; inset: 0; background-size: cover; background-position: center; z-index: 0; transition: opacity 0.5s; }
         .header-content { position: relative; z-index: 2; padding-top: 60px; }
         .text-shadow-white { text-shadow: 0 2px 10px rgba(255,255,255,0.9); }
 
+        /* Detalhes e Timeline */
         details > summary { list-style: none; cursor: pointer; transition: background 0.2s; }
         details[open] > summary { background-color: #eff6ff; border-bottom: 1px solid #dbeafe; }
         
@@ -69,23 +73,46 @@
         a.map-link { color: #2563eb; text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 4px; }
         a.map-link:hover { text-decoration: underline; }
         
+        /* Debug Console */
         #debug-console::-webkit-scrollbar { width: 6px; }
         #debug-console::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+
+        /* CORREÇÃO DO GOOGLE MAPS AUTOCOMPLETE NO MODAL */
+        /* Z-Index alto para garantir que apareça sobre o modal */
+        .pac-container {
+            z-index: 10500 !important; 
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e5e7eb;
+            font-family: 'Inter', sans-serif;
+        }
+        .pac-item {
+            padding: 10px;
+            cursor: pointer;
+        }
+        .pac-item:hover {
+            background-color: #f3f4f6;
+        }
+        .pac-icon {
+            display: none; /* Opcional: remover ícones padrão para visual mais limpo */
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
 
+    <!-- Loader -->
     <div id="loading-spinner" class="hidden fixed inset-0 bg-black bg-opacity-70 flex flex-col items-center justify-center z-[100] backdrop-blur-sm">
         <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
-        <p id="loading-message" class="text-white mt-6 text-lg font-medium animate-pulse">A consultar o Especialista ddripp...</p>
+        <p id="loading-message" class="text-white mt-6 text-lg font-medium animate-pulse">Consultando o Especialista ddripp...</p>
     </div>
 
     <div id="app-container" class="container mx-auto max-w-4xl p-4 pb-32 flex-grow">
 
+        <!-- Initial View -->
         <div id="initial-view" class="flex flex-col items-center justify-center min-h-[70vh]">
              <header class="text-center mb-10">
                 <h1 class="text-6xl font-bold text-gray-900 tracking-tighter">ddripp</h1>
-                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V53</p>
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V54</p>
             </header>
             
             <div class="bg-white p-6 rounded-2xl card-shadow w-full shadow-lg border border-gray-100 relative">
@@ -105,15 +132,19 @@
             </div>
         </div>
 
+        <!-- Gap Filling View (Modal de Perguntas) -->
         <div id="gap-filling-view" class="hidden fixed inset-0 bg-white z-50 p-8 flex flex-col items-center justify-center">
             <div class="w-full max-w-md text-center">
                 <h3 id="gap-question" class="font-bold text-2xl mb-8 text-gray-800"></h3>
-                <div id="place-autocomplete-container" class="hidden mb-6 w-full text-left"></div>
-                <input type="text" id="gap-input" class="w-full p-4 border-b-2 border-gray-300 focus:border-blue-600 outline-none text-xl mb-8 bg-transparent" placeholder="Digite sua resposta...">
-                <button onclick="handleGapInput()" class="w-full bg-black text-white font-bold py-4 rounded-full hover:bg-gray-800 transition">Confirmar</button>
+                
+                <!-- Input único que serve para Texto, Data e Autocomplete do Maps -->
+                <input type="text" id="gap-input" class="w-full p-4 border-b-2 border-gray-300 focus:border-blue-600 outline-none text-xl mb-8 bg-transparent transition-colors" placeholder="Digite sua resposta...">
+                
+                <button onclick="handleGapInput()" class="w-full bg-black text-white font-bold py-4 rounded-full hover:bg-gray-800 transition shadow-lg transform active:scale-95">Confirmar</button>
             </div>
         </div>
 
+        <!-- Flight Selection View -->
         <div id="flight-selection-view" class="hidden fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
             <div class="bg-white p-6 rounded-2xl w-full max-w-lg shadow-2xl relative">
                 <h3 class="font-bold text-xl mb-1 text-gray-900">Selecione o Voo</h3>
@@ -131,6 +162,7 @@
             </div>
         </div>
 
+        <!-- Itinerary View -->
         <div id="itinerary-view" class="hidden bg-white min-h-screen">
             <header id="trip-header" class="mb-8 p-6 rounded-b-3xl shadow-sm border-b border-gray-100">
                 <div id="header-bg-image"></div>
@@ -164,6 +196,7 @@
         </div>
     </div>
 
+    <!-- Debug Console -->
     <div id="debug-console-container" class="fixed bottom-0 left-0 w-full bg-gray-900 border-t border-gray-800 z-40 transition-transform duration-300 translate-y-[85%] hover:translate-y-0 h-32 opacity-90 no-print">
         <div class="flex justify-between items-center bg-gray-800 px-4 py-1 cursor-pointer">
             <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Status do Sistema</span>
@@ -178,8 +211,11 @@
         var selectedFlightActivityIndex = -1; 
         var selectedFiles = []; 
         var destinationImageUrl = "";
+        
+        // --- VARIÁVEL PARA INSTÂNCIA DO AUTOCOMPLETE ---
+        var currentAutocomplete = null;
 
-        // --- DEFININDO FUNÇÕES AUXILIARES PRIMEIRO (Para evitar ReferenceError) ---
+        // --- DEFININDO FUNÇÕES AUXILIARES PRIMEIRO ---
         function renderFilePreviews() {
             var container = document.getElementById('file-preview-container');
             container.innerHTML = '';
@@ -401,12 +437,32 @@
             showLoader('Consultando Modelo Fine-Tuned...');
             var today = new Date().toLocaleDateString('pt-BR');
             
-            var masterPrompt = `[ROLE] Você é o 'ddripp', expert logístico.
-            [REGRAS]
-            1. Se o usuário NÃO der o número do voo, gere 3 opções realistas em 'flightOptions' (Manhã, Tarde, Noite).
-            2. Extraia data, hora e local de tudo.
-            [DATA ATUAL]: ${today}
-            [INPUT]: "${inputVal}"`;
+            // --- INSTRUÇÃO DO SISTEMA ATUALIZADA (NOVA PERSONA) ---
+            var masterPrompt = `INSTRUÇÃO DO SISTEMA: AGENTE LOGÍSTICO DRIPP (Assistente de Organização de Viagens)
+I. PAPEL E MISSÃO
+Você é o Agente Logístico DDRIPP, um assistente sênior com 20 anos de experiência em produção de logística de viagens (curtas, longas, solo, grupo, nacionais ou internacionais). Sua missão é auxiliar o organizador de viagens (o usuário) a transformar uma coleção de dados brutos e fragmentados em um plano de viagem completo, impecável, validado e otimizado, que cubra o viajante em tempo integral, da partida ao retorno.
+II. REGRAS DE PROCESSAMENTO DE DADOS E LÓGICA (Consolidação e Proatividade)
+Análise de Input Bruto: Você deve analisar o input do usuário, independentemente do seu formato. Filtre rigorosamente os elementos cruciais para a logística: Quem, Onde, O quê, Quando, Meio de Transporte e Hospedagem.
+Organização e Cronologia: Reestruture todo o material filtrado em uma sequência lógica, cronológica e ininterrupta por dia. O viajante não pode ter "buracos" no roteiro.
+Identificação e Preenchimento de Lacunas (Gap-Filling Interativo):
+Verificação de Pernoite: Para viagens que exigem pernoite, verifique se há uma hospedagem definida. Se não houver, gere a seguinte instrução formatada para acionar um pop-up de lembrete no aplicativo:
+"missingCriticalInfo": "[LEMBRETE - HOSPEDAGEM] Já temos hospedagem definida?"
+A resposta deve guiar o app para preencher a informação na lacuna.
+Verificação de Distância e Transporte: Para atividades distantes ou transições logísticas críticas (como aeroporto/hotel), garanta que um meio de transporte adequado esteja definido. Caso contrário, gere a seguinte instrução formatada para acionar um pop-up de lembrete:
+[LEMBRETE - TRANSPORTE] Já temos meio de transporte definido para este trajeto? (Use transport: "ASK_USER" no json).
+Criação de Etapas Derivadas (Proatividade Logística): Você deve gerar e inserir novas etapas de "Deslocamento" baseadas em consultas ao Google Maps para programar o horário de saída e a pontualidade.
+Exemplo: Se o input define um "Compromisso às 09:00" e a "Hospedagem", use o tempo de deslocamento (ex. 15min) para calcular e inserir uma atividade anterior como: 08:30 - Saída da Hospedagem.
+Processamento de Voos (Validação e Detalhamento):
+Validação de Dados: Se as informações de voo estiverem incompletas (falta data, aeroporto de partida/chegada, Cia, número do voo, horário), o sistema deve solicitar uma busca no Google Flights (simulando a função da API de busca).
+Sugestão e Escolha: Apresente 3 opções de voos coerentes com as características informadas (ex: [VOOS ENCONTRADOS] Opção 1, Opção 2, Opção 3) no array 'flightOptions'.
+Detalhamento Logístico: A partir do voo informado e definitivo, crie e insira no cronograma etapas detalhadas no formato de menu dropdown.
+III. REGRAS DE CURADORIA (Diferencial de Baixa Emissão de Carbono)
+Alimentação Local e Otimizada: Identifique o horário de almoço e/ou jantar no cronograma.
+Sugestão Padrão: Crie uma lista de 3-5 sugestões de restaurantes próximos ao destino da atividade atual.
+Atividades de Baixa Emissão: Reconheça o "Tempo Livre" no cronograma.
+
+[DATA ATUAL DO SISTEMA]: ${today}
+[INPUT DO USUÁRIO]: "${inputVal}"`;
 
             var schemaStructure = {
                 type: "OBJECT",
@@ -467,6 +523,8 @@
                     if (tripData.missingCriticalInfo) {
                         if (!tripData.destination && tripData.missingCriticalInfo.toLowerCase().includes("destino")) missingInfoQueue.push({ key: 'destination', q: tripData.missingCriticalInfo, type: 'location' });
                         else if (!tripData.startDate && tripData.missingCriticalInfo.toLowerCase().includes("data")) missingInfoQueue.push({ key: 'startDate', q: tripData.missingCriticalInfo, type: 'date' });
+                        else if (tripData.missingCriticalInfo.toLowerCase().includes("hospedagem")) missingInfoQueue.push({ key: 'accommodation', q: tripData.missingCriticalInfo, type: 'location' });
+                        else missingInfoQueue.push({ key: 'general_gap', q: tripData.missingCriticalInfo, type: 'text' });
                     }
                     checkMissingInfo();
                 }
@@ -484,48 +542,69 @@
             else generateItinerary();
         }
 
+        // --- FUNÇÃO CORRIGIDA DE PERGUNTAS (AUTOCOMPLETE STABLE) ---
         function askNext() {
             var q = missingInfoQueue[0];
             document.getElementById('gap-question').textContent = q.q;
             var input = document.getElementById('gap-input');
             input.value = '';
             
+            // Desconectar o Autocomplete anterior se existir
+            // Clonamos o nó para remover todos os event listeners antigos do Autocomplete
+            var newInput = input.cloneNode(true);
+            input.parentNode.replaceChild(newInput, input);
+            input = newInput; // Atualiza a referência
+            currentAutocomplete = null;
+
             if (q.type === 'location') {
-                document.getElementById('gap-input').classList.add('hidden');
-                var container = document.getElementById('place-autocomplete-container');
-                container.innerHTML = ''; container.classList.remove('hidden');
-                google.maps.importLibrary("places").then(({ PlaceAutocompleteElement }) => {
-                    const autocomplete = new PlaceAutocompleteElement();
-                    autocomplete.placeholder = "Digite a cidade ou local...";
-                    container.appendChild(autocomplete);
-                    autocomplete.addEventListener("gmp-places-select", async ({ place }) => {
-                        await place.fetchFields({ fields: ["displayName", "formattedAddress"] });
-                        input.value = place.formattedAddress || place.displayName;
+                input.type = 'text';
+                input.placeholder = "Digite o local...";
+                
+                // Inicializar Autocomplete Clássico do Google Maps
+                google.maps.importLibrary("places").then(() => {
+                    currentAutocomplete = new google.maps.places.Autocomplete(input, {
+                        fields: ["formatted_address", "name", "geometry"],
+                        strictBounds: false,
                     });
-                }).catch(e => {
-                    document.getElementById('gap-input').classList.remove('hidden');
-                    document.getElementById('place-autocomplete-container').classList.add('hidden');
+
+                    // Listener para quando o usuário seleciona um lugar
+                    currentAutocomplete.addListener("place_changed", () => {
+                        const place = currentAutocomplete.getPlace();
+                        if (place.formatted_address || place.name) {
+                            input.value = place.formatted_address || place.name;
+                            // Opcional: Auto-confirmar? Por enquanto deixamos o usuário clicar para confirmar
+                        }
+                    });
                 });
+
+            } else if (q.type === 'date') {
+                input.type = 'date';
+                input.placeholder = "";
             } else {
-                if(q.type === 'date') input.type = 'date'; else input.type = 'text';
-                document.getElementById('gap-input').classList.remove('hidden');
-                document.getElementById('place-autocomplete-container').classList.add('hidden');
+                input.type = 'text';
+                input.placeholder = "Digite sua resposta...";
             }
+
             document.getElementById('gap-filling-view').classList.remove('hidden');
             document.getElementById('initial-view').classList.add('hidden');
-            if(q.type !== 'location') input.focus();
+            input.focus();
         }
 
         function handleGapInput() {
-            var val = document.getElementById('gap-input').value;
+            var inputEl = document.getElementById('gap-input');
+            var val = inputEl.value;
             if (!val) return alert('Por favor, responda.');
+            
             if (missingInfoQueue[0].key.startsWith('transport_fix_')) {
                 var idx = parseInt(missingInfoQueue[0].key.split('_')[2]);
                 tripData.activities[idx].transport = val;
                 tripData.activities[idx].description += " (" + val + ")";
+            } else if (missingInfoQueue[0].key === 'general_gap') {
+                 // Apenas continua, assumindo que foi resolvido ou é info extra
             } else {
                 tripData[missingInfoQueue[0].key] = val;
             }
+            
             missingInfoQueue.shift();
             if (missingInfoQueue.length > 0) askNext();
             else {
@@ -538,7 +617,7 @@
         function generateItinerary() {
             document.getElementById('initial-view').classList.add('hidden');
             document.getElementById('itinerary-view').classList.remove('hidden');
-            document.getElementById('fixed-footer-input').classList.remove('hidden');
+            // document.getElementById('fixed-footer-input').classList.remove('hidden'); // Comentado pois não existe no HTML original
             document.getElementById('trip-title').textContent = tripData.tripObjective || ("Viagem para " + tripData.destination);
             document.getElementById('trip-destination').textContent = tripData.destination;
             var wikiLink = document.getElementById('trip-destination-link');
