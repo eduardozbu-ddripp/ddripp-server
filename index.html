@@ -3,330 +3,702 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ddripp - Agente Logístico (Endpoint Conectado)</title>
+    <title>ddripp - Digital Roadbook (V53 Final Fix)</title>
+    
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✈️</text></svg>">
+
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script type="importmap">
-      {
-        "imports": {
-          "@google/generative-ai": "https://esm.run/@google/generative-ai"
-        }
-      }
+
+    <script>
+        var k1 = "AIzaSyA9wFITzUsGHwj";
+        var k2 = "mfLO615E66sqCq9XYzZI";
+        window.API_KEY_FINAL = k1 + k2;
+        window.ENDPOINT_URL = "https://generateroadbook-swx7ffu2ra-uc.a.run.app"; 
+        var SERVER_SHARE_URL = "https://ddripp-server.onrender.com/share"; 
+
+        // UTILITÁRIOS GLOBAIS (Definidos no topo para evitar ReferenceError)
+        window.logToScreen = function(msg, type = 'info') {
+            const consoleEl = document.getElementById('debug-console');
+            if(!consoleEl) return;
+            const color = type === 'error' ? 'text-red-400' : 'text-gray-300';
+            consoleEl.innerHTML += `<div class="${color} mb-1 border-b border-gray-800 pb-1 font-mono text-xs">${msg}</div>`;
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        };
+        
+        window.showLoader = function(msg) {
+            const el = document.getElementById('loading-message');
+            if(el) el.innerText = msg;
+            document.getElementById('loading-spinner').classList.remove('hidden');
+        };
+        
+        window.hideLoader = function() {
+            document.getElementById('loading-spinner').classList.add('hidden');
+        };
     </script>
+
+    <script>
+        (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({key: window.API_KEY_FINAL, v: "weekly"});
+    </script>
+
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-        .chat-container { height: calc(100vh - 180px); overflow-y: auto; scroll-behavior: smooth; }
-        .input-area { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 1.5rem; box-shadow: 0 -4px 20px rgba(0,0,0,0.05); z-index: 50; }
-        .input-wrapper { display: flex; align-items: flex-end; gap: 0.5rem; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 1.5rem; padding: 0.75rem 1rem; transition: border-color 0.2s; }
-        .input-wrapper:focus-within { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
-        textarea { border: none; background: transparent; resize: none; outline: none; max-height: 120px; width: 100%; font-size: 0.95rem; line-height: 1.5; padding: 0; color: #1e293b; }
-        .icon-btn { color: #64748b; padding: 0.5rem; border-radius: 50%; cursor: pointer; transition: all 0.2s; display: flex; items-center; justify-center; }
-        .icon-btn:hover { background-color: #e2e8f0; color: #334155; }
-        .send-btn { background-color: #2563eb; color: white; padding: 0.75rem; border-radius: 50%; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3); }
-        .send-btn:hover { background-color: #1d4ed8; transform: scale(1.05); }
-        .send-btn:disabled { background-color: #94a3b8; cursor: not-allowed; transform: none; }
-        .loader { width: 20px; height: 20px; border: 2px solid #ffffff; border-bottom-color: transparent; border-radius: 50%; display: inline-block; box-sizing: border-box; animation: rotation 1s linear infinite; }
-        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        /* Maps Style */
-        .pac-container { z-index: 99999; border-radius: 8px; margin-top: 4px; font-family: 'Inter', sans-serif; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; color: #1f2937; }
+        .card-shadow { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05); }
+        
+        /* 3 COLUNAS MANTIDAS */
+        .itinerary-grid { display: grid; grid-template-columns: 70px 90px 1fr; gap: 1rem; align-items: start; padding: 1.25rem; border-bottom: 1px solid #f3f4f6; }
+        @media (max-width: 640px) { .itinerary-grid { grid-template-columns: 50px 70px 1fr; gap: 0.5rem; padding: 1rem; font-size: 0.9rem; } }
+        
+        #trip-header { position: relative; overflow: hidden; min-h: 240px; display: flex; flex-direction: column; justify-content: flex-end; }
+        #header-bg-image { position: absolute; inset: 0; background-size: cover; background-position: center; z-index: 0; transition: opacity 0.5s; }
+        .header-content { position: relative; z-index: 2; padding-top: 60px; }
+        .text-shadow-white { text-shadow: 0 2px 10px rgba(255,255,255,0.9); }
+
+        details > summary { list-style: none; cursor: pointer; transition: background 0.2s; }
+        details[open] > summary { background-color: #eff6ff; border-bottom: 1px solid #dbeafe; }
+        
+        .timeline-container { position: relative; padding-left: 20px; border-left: 2px solid #e5e7eb; margin-left: 10px; margin-top: 10px; }
+        .flight-event { position: relative; padding-bottom: 24px; padding-left: 16px; }
+        .flight-event:last-child { padding-bottom: 0; }
+        .flight-dot { position: absolute; left: -27px; top: 4px; width: 12px; height: 12px; background: white; border: 2px solid #9ca3af; border-radius: 50%; z-index: 10; }
+        .flight-dot.active { background: #3b82f6; border-color: #3b82f6; }
+
+        a.map-link { color: #2563eb; text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 4px; }
+        a.map-link:hover { text-decoration: underline; }
+        
+        #debug-console::-webkit-scrollbar { width: 6px; }
+        #debug-console::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
     </style>
 </head>
-<body class="flex flex-col h-screen text-slate-800">
+<body class="min-h-screen flex flex-col">
 
-    <header class="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center z-40 h-[70px]">
-        <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white font-bold text-sm">dd</div>
-            <div>
-                <h1 class="text-sm font-bold text-slate-900">ddripp <span class="text-xs font-normal text-slate-500 ml-1">Endpoint Production</span></h1>
-                <div id="status-indicator" class="flex items-center gap-1.5 mt-0.5">
-                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
-                    <span class="text-[10px] text-slate-500 font-medium">Conectado ao Vertex Endpoint</span>
-                </div>
-            </div>
-        </div>
-        
-        <div class="hidden md:flex items-center bg-slate-100 rounded-lg px-3 py-1.5 w-80 border border-slate-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
-            <span class="text-slate-400 mr-2">📍</span>
-            <input type="text" id="maps-autocomplete" class="bg-transparent border-none outline-none text-xs w-full text-slate-700 placeholder-slate-400" placeholder="Definir Localização Base">
-        </div>
-    </header>
+    <div id="loading-spinner" class="hidden fixed inset-0 bg-black bg-opacity-70 flex flex-col items-center justify-center z-[100] backdrop-blur-sm">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
+        <p id="loading-message" class="text-white mt-6 text-lg font-medium animate-pulse">A consultar o Especialista ddripp...</p>
+    </div>
 
-    <main class="flex-1 overflow-hidden relative">
-        <div id="chat-content" class="chat-container px-4 py-8 max-w-3xl mx-auto space-y-6 pb-32">
-            <div class="flex gap-4 fade-in">
-                <div class="w-8 h-8 rounded-full bg-slate-100 flex-shrink-0 flex items-center justify-center text-slate-600 text-xs font-bold">IA</div>
-                <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 max-w-[90%]">
-                    <p class="text-sm text-slate-700">Olá. Sou o <strong>Agente Logístico ddripp</strong>.</p>
-                    <p class="text-xs text-slate-500 mt-2">Estou conectado ao seu Endpoint dedicado. As regras de Persona e Sustentabilidade serão aplicadas sobre o modelo treinado.</p>
-                </div>
-            </div>
-            <div id="response-area"></div>
-        </div>
-    </main>
+    <div id="app-container" class="container mx-auto max-w-4xl p-4 pb-32 flex-grow">
 
-    <div class="input-area">
-        <div class="max-w-3xl mx-auto space-y-3">
-            <div id="file-list" class="flex flex-wrap gap-2 min-h-[0px] transition-all"></div>
+        <div id="initial-view" class="flex flex-col items-center justify-center min-h-[70vh]">
+             <header class="text-center mb-10">
+                <h1 class="text-6xl font-bold text-gray-900 tracking-tighter">ddripp</h1>
+                <p class="text-gray-500 mt-2 text-sm font-medium tracking-widest uppercase">Digital Roadbook • V53</p>
+            </header>
             
-            <div class="input-wrapper">
-                <div class="relative group">
-                    <input type="file" id="file-upload" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="handleFileSelect(event)">
-                    <button class="icon-btn" title="Anexar Arquivo">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+            <div class="bg-white p-6 rounded-2xl card-shadow w-full shadow-lg border border-gray-100 relative">
+                <textarea id="initial-input" rows="5" class="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-lg resize-none" placeholder="Ex: Viagem para Lisboa dia 20 de Dezembro..."></textarea>
+                
+                <div class="flex justify-between items-center mt-4">
+                    <div class="flex gap-2">
+                        <button onclick="document.getElementById('file-upload').click()" class="text-gray-400 hover:text-blue-600 p-2 rounded-full hover:bg-gray-50 transition"><i class="fas fa-paperclip text-xl"></i></button>
+                        <button onclick="alert('Voz simulada')" class="text-gray-400 hover:text-blue-600 p-2 rounded-full hover:bg-gray-50 transition"><i class="fas fa-microphone text-xl"></i></button>
+                    </div>
+                    <button onclick="handleInitialInput()" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-full hover:bg-blue-700 transition shadow-md transform active:scale-95">
+                        GERAR ROTEIRO
                     </button>
                 </div>
-
-                <textarea id="user-prompt" rows="1" placeholder="Descreva a viagem ou anexe os documentos..." oninput="autoResize(this)"></textarea>
-
-                <button id="mic-btn" class="icon-btn" title="Gravar Voz">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
-                </button>
-
-                <button id="send-btn" onclick="generateItinerary()" class="send-btn flex items-center justify-center">
-                    <svg id="send-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                    <span id="loading-spinner" class="loader hidden"></span>
-                </button>
+                <input type="file" id="file-upload" class="hidden" accept=".pdf,image/*,application/pdf" multiple onchange="handleFileSelect(this)">
+                <div id="file-preview-container" class="hidden flex flex-wrap gap-2 mt-4 p-2 bg-gray-50 rounded-lg"></div>
             </div>
-            <p class="text-center text-[10px] text-slate-400 font-mono" id="model-debug-info">Endpoint: ...9357440</p>
+        </div>
+
+        <div id="gap-filling-view" class="hidden fixed inset-0 bg-white z-50 p-8 flex flex-col items-center justify-center">
+            <div class="w-full max-w-md text-center">
+                <h3 id="gap-question" class="font-bold text-2xl mb-8 text-gray-800"></h3>
+                <div id="place-autocomplete-container" class="hidden mb-6 w-full text-left"></div>
+                <input type="text" id="gap-input" class="w-full p-4 border-b-2 border-gray-300 focus:border-blue-600 outline-none text-xl mb-8 bg-transparent" placeholder="Digite sua resposta...">
+                <button onclick="handleGapInput()" class="w-full bg-black text-white font-bold py-4 rounded-full hover:bg-gray-800 transition">Confirmar</button>
+            </div>
+        </div>
+
+        <div id="flight-selection-view" class="hidden fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+            <div class="bg-white p-6 rounded-2xl w-full max-w-lg shadow-2xl relative">
+                <h3 class="font-bold text-xl mb-1 text-gray-900">Selecione o Voo</h3>
+                <p class="text-sm text-gray-500 mb-4">Encontramos estas opções para <span id="flight-route-display"></span>:</p>
+                
+                <div id="flight-options-list" class="space-y-3 max-h-[50vh] overflow-y-auto mb-4"></div>
+                
+                <a id="google-flights-link" href="#" target="_blank" class="block w-full text-center border border-gray-200 text-blue-600 font-medium py-3 rounded-xl hover:bg-blue-50 transition mb-4">
+                    <i class="fas fa-external-link-alt mr-2"></i> Ver Voos Reais no Google
+                </a>
+
+                <div class="pt-4 border-t border-gray-100 flex justify-end">
+                    <button onclick="confirmFlightSelection()" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-xl hover:bg-blue-700 transition shadow-lg">Confirmar Seleção</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="itinerary-view" class="hidden bg-white min-h-screen">
+            <header id="trip-header" class="mb-8 p-6 rounded-b-3xl shadow-sm border-b border-gray-100">
+                <div id="header-bg-image"></div>
+                <div id="header-loader" class="absolute inset-0 flex items-center justify-center bg-gray-50 z-0">
+                    <span class="text-gray-400 text-sm animate-pulse">Carregando capa...</span>
+                </div>
+                
+                <div class="header-content mt-16 relative z-10">
+                    <h2 id="trip-title" class="text-4xl font-extrabold text-gray-900 mb-2 leading-tight text-shadow-white"></h2>
+                    <div class="flex flex-wrap items-center gap-3 text-gray-600 mb-4 bg-white/60 backdrop-blur-md inline-flex px-4 py-2 rounded-full shadow-sm border border-white/50">
+                        <a id="trip-destination-link" href="#" target="_blank" class="flex items-center hover:text-blue-600 transition group cursor-pointer">
+                            <i class="fas fa-map-marker-alt mr-2 text-red-500"></i>
+                            <span id="trip-destination" class="font-medium text-lg group-hover:underline"></span>
+                        </a>
+                        <span class="text-gray-400">•</span>
+                        <div class="flex items-center">
+                            <i class="fas fa-calendar-alt mr-2 text-gray-500"></i>
+                            <span id="trip-date"></span>
+                        </div>
+                    </div>
+                    <div id="weather-widget" class="hidden ml-2 inline-flex items-center bg-white/80 backdrop-blur px-3 py-2 rounded-full border border-gray-200 shadow-sm text-sm"></div>
+                </div>
+            </header>
+
+            <div id="itinerary-content" class="px-4 space-y-8 container mx-auto max-w-4xl"></div>
+            
+            <div id="trip-footer" class="mt-16 flex justify-center gap-4 pb-12 px-4 no-print">
+                <button onclick="shareTrip()" class="flex items-center bg-green-500 text-white font-bold py-3 px-6 rounded-full hover:bg-green-600 shadow-lg hover:-translate-y-1 transition"><i class="fab fa-whatsapp mr-2"></i> Partilhar</button>
+                <button onclick="downloadPDF()" class="flex items-center bg-gray-800 text-white font-bold py-3 px-6 rounded-full hover:bg-gray-900 shadow-lg hover:-translate-y-1 transition"><i class="fas fa-file-pdf mr-2"></i> PDF</button>
+            </div>
         </div>
     </div>
 
-    <script type="module">
-        import { GoogleGenerativeAI } from "@google/generative-ai";
+    <div id="debug-console-container" class="fixed bottom-0 left-0 w-full bg-gray-900 border-t border-gray-800 z-40 transition-transform duration-300 translate-y-[85%] hover:translate-y-0 h-32 opacity-90 no-print">
+        <div class="flex justify-between items-center bg-gray-800 px-4 py-1 cursor-pointer">
+            <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Status do Sistema</span>
+            <span class="text-gray-500 text-[10px]">Logs ▲</span>
+        </div>
+        <div id="debug-console" class="p-2 h-24 overflow-y-auto text-gray-300"><div>Pronto.</div></div>
+    </div>
 
-        // =========================================================================
-        // ⚙️ CREDENCIAIS (CONFIGURAÇÃO SEGURA)
-        // =========================================================================
-        const K1 = "AIzaSyA9wFITzU";
-        const K2 = "sGHwjmfLO615E";
-        const K3 = "66sqCq9XYzZI";
-        
-        const API_KEY = `${K1}${K2}${K3}`; 
-        
-        // ENDPOINT ATUALIZADO (Fornecido pelo usuário)
-        const TUNED_MODEL_ID = "projects/246188888920/locations/us-central1/endpoints/8626564821879357440"; 
-        // =========================================================================
+    <script>
+        var tripData = { origin: null, destination: null, startDate: null, returnDate: null, activities: [], title: '', tripObjective: '', weatherForecast: '', accommodation: null };
+        var missingInfoQueue = [];
+        var selectedFlightActivityIndex = -1; 
+        var selectedFiles = []; 
+        var destinationImageUrl = "";
 
-        let uploadedFiles = [];
-        let genAI = null;
-        let selectedLocationContext = "";
+        // --- DEFININDO FUNÇÕES AUXILIARES PRIMEIRO (Para evitar ReferenceError) ---
+        function renderFilePreviews() {
+            var container = document.getElementById('file-preview-container');
+            container.innerHTML = '';
+            if (selectedFiles.length > 0) container.classList.remove('hidden'); else container.classList.add('hidden');
+            selectedFiles.forEach((file, index) => {
+                container.innerHTML += `<div class="file-badge"><i class="fas fa-file-alt mr-2"></i>${file.name} <button onclick="removeFile(${index})" class="ml-2 text-red-500 hover:text-red-700 font-bold">×</button></div>`;
+            });
+        }
 
-        // INICIALIZAÇÃO
-        (function init() {
-            // Carregar Maps
-            const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=places&callback=initMaps`;
-            script.async = true;
-            script.defer = true;
-            document.head.appendChild(script);
+        function removeFile(index) { 
+            selectedFiles.splice(index, 1); 
+            renderFilePreviews(); 
+        }
 
-            // Inicializar SDK
-            genAI = new GoogleGenerativeAI(API_KEY);
-        })();
-
-        // CONFIGURAÇÃO DO MAPS (Places API)
-        window.initMaps = () => {
-            const input = document.getElementById('maps-autocomplete');
+        // --- CORE: CHAMADA AO ENDPOINT ---
+        async function callGeminiSmart(promptText, schema) {
+            window.logToScreen("Enviando dados para o modelo Fine-Tuned...", 'info');
             try {
-                const autocomplete = new google.maps.places.Autocomplete(input, {
-                    fields: ["formatted_address", "name"]
+                const response = await fetch(window.ENDPOINT_URL, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: promptText, schema: schema })
                 });
-                autocomplete.addListener("place_changed", () => {
-                    const place = autocomplete.getPlace();
-                    if (place.formatted_address) {
-                        selectedLocationContext = `Localização Base/Referência: ${place.name} (${place.formatted_address}).`;
-                        input.parentElement.classList.add('ring-2', 'ring-green-400');
-                        setTimeout(() => input.parentElement.classList.remove('ring-2', 'ring-green-400'), 2000);
+                if (!response.ok) throw new Error(await response.text());
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                window.logToScreen("SUCESSO: O modelo treinado respondeu!", 'success');
+                const resultText = data.text;
+                try {
+                    const cleanJson = resultText.replace(/```json/g, "").replace(/```/g, "").trim();
+                    return JSON.parse(cleanJson);
+                } catch (e) {
+                    console.error("Erro JSON:", resultText);
+                    throw new Error("O modelo respondeu, mas não em JSON válido.");
+                }
+            } catch (err) {
+                window.logToScreen(`Falha Crítica: ${err.message}`, 'error');
+                alert(`Erro ao conectar com seu modelo: ${err.message}`);
+                throw err;
+            }
+        }
+
+        // --- LÓGICA LOGÍSTICA ---
+        function subtractTime(timeStr, minutesToSubtract) {
+            if(!timeStr) return "";
+            var parts = timeStr.split(':'); var d = new Date();
+            d.setHours(parseInt(parts[0]), parseInt(parts[1]), 0);
+            d.setMinutes(d.getMinutes() - minutesToSubtract);
+            return d.getHours().toString().padStart(2, '0') + ":" + d.getMinutes().toString().padStart(2, '0');
+        }
+        function addTime(timeStr, minutesToAdd) {
+            if(!timeStr) return "";
+            var parts = timeStr.split(':'); var d = new Date();
+            d.setHours(parseInt(parts[0]), parseInt(parts[1]), 0);
+            d.setMinutes(d.getMinutes() + minutesToAdd);
+            return d.getHours().toString().padStart(2, '0') + ":" + d.getMinutes().toString().padStart(2, '0');
+        }
+
+        function fillGeographicGaps() {
+            if (!tripData.activities) return;
+            tripData.activities.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+            var newActivities = [];
+            var lastKnownLocation = tripData.accommodation || tripData.origin || null;
+            
+            for (var i = 0; i < tripData.activities.length; i++) {
+                var curr = tripData.activities[i];
+                // Lógica de Voo
+                if (curr.type === 'travel' && curr.destinationAirport && curr.flightNumber) {
+                    newActivities.push(curr);
+                    var arrivalTime = addTime(curr.time, curr.flightDurationMinutes || 120);
+                    var transferStart = addTime(arrivalTime, 30); 
+                    var nextLocation = tripData.accommodation || null;
+                    if (i < tripData.activities.length - 1) {
+                        var next = tripData.activities[i+1];
+                        if(next.location && !next.location.toLowerCase().includes("aeroporto")) nextLocation = next.location;
+                    } else if (!tripData.accommodation) {
+                        nextLocation = tripData.destination || null;
+                    }
+                    var transferDest = nextLocation || "Acomodação/Ponto de Encontro";
+                    if (tripData.returnDate && curr.date === tripData.returnDate && curr.destinationAirport.includes(tripData.origin)) transferDest = "Casa / Origem";
+
+                    if (nextLocation && !nextLocation.includes(curr.destinationAirport)) {
+                        newActivities.push({
+                            date: curr.date, time: transferStart, type: "travel", person: curr.person,
+                            transport: "Transfer/Uber", description: "Transfer Aeroporto -> " + transferDest,
+                            location: curr.destinationAirport + " para " + transferDest
+                        });
+                        lastKnownLocation = transferDest;
+                    } else {
+                        lastKnownLocation = curr.destinationAirport;
+                    }
+                    continue;
+                }
+                // Lógica de Deslocamento
+                if (curr.location) {
+                    var cleanedLast = lastKnownLocation ? lastKnownLocation.split(' para ')[lastKnownLocation.split(' para ').length - 1] : null;
+                    if (cleanedLast && curr.location !== cleanedLast && !curr.description.includes(cleanedLast)) {
+                        var travelTime = subtractTime(curr.time, 45);
+                        newActivities.push({
+                            date: curr.date, time: travelTime, person: curr.person, type: "travel",
+                            description: "Deslocamento: " + cleanedLast + " -> " + curr.location,
+                            location: cleanedLast + " para " + curr.location, transport: "Deslocamento Urbano"
+                        });
+                    }
+                    lastKnownLocation = curr.location;
+                }
+                newActivities.push(curr);
+            }
+            tripData.activities = newActivities.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+        }
+
+        // --- FLUXO DE VOOS ---
+        function checkFlightClarification() {
+            var flightIndex = tripData.activities.findIndex(function(a) {
+                var isVague = a.type === 'travel' && (!a.flightNumber || !a.airline || a.flightNumber === "0000");
+                var hasOptions = a.flightOptions && a.flightOptions.length > 0;
+                return isVague || hasOptions;
+            });
+            if (flightIndex !== -1) {
+                selectedFlightActivityIndex = flightIndex;
+                var activity = tripData.activities[flightIndex];
+                
+                var options = activity.flightOptions;
+                if (!options || options.length === 0) {
+                    options = [
+                        { airline: "Opção A (Manhã)", flightNumber: "08:00", time: "08:00", origin: activity.originAirport || "Origem", destination: activity.destinationAirport || "Destino", durationMinutes: 120 },
+                        { airline: "Opção B (Tarde)", flightNumber: "14:00", time: "14:00", origin: activity.originAirport || "Origem", destination: activity.destinationAirport || "Destino", durationMinutes: 120 },
+                        { airline: "Opção C (Noite)", flightNumber: "20:00", time: "20:00", origin: activity.originAirport || "Origem", destination: activity.destinationAirport || "Destino", durationMinutes: 120 }
+                    ];
+                }
+                openFlightSelectionModal(options, activity);
+                return true; 
+            }
+            return false;
+        }
+
+        function openFlightSelectionModal(options, activity) {
+            var list = document.getElementById('flight-options-list');
+            list.innerHTML = '';
+            
+            var flightDate = activity.date; 
+            var flightLink = `https://www.google.com/travel/flights?q=Flights%20to%20${activity.destinationAirport}%20from%20${activity.originAirport}%20on%20${flightDate}`;
+            document.getElementById('google-flights-link').href = flightLink;
+            document.getElementById('flight-route-display').innerText = `${activity.originAirport || 'Origem'} -> ${activity.destinationAirport || 'Destino'} (${activity.date})`;
+
+            options.forEach(function(opt, idx) {
+                var div = document.createElement('div');
+                div.className = "border border-gray-200 rounded-xl p-4 hover:bg-blue-50 cursor-pointer transition flex items-center justify-between group";
+                div.innerHTML = `
+                    <div>
+                        <div class="font-bold text-gray-900 group-hover:text-blue-700">${opt.airline} ${opt.flightNumber}</div>
+                        <div class="text-sm text-gray-500">${opt.origin} (${opt.time}) ➝ ${opt.destination}</div>
+                    </div>
+                    <input type="radio" name="flight-opt" value="${idx}" class="w-5 h-5 text-blue-600">
+                `;
+                div.onclick = function() { this.querySelector('input').checked = true; };
+                list.appendChild(div);
+            });
+            
+            var manualDiv = document.createElement('div');
+            manualDiv.className = "border border-gray-200 rounded-xl p-4 hover:bg-blue-50 cursor-pointer transition";
+            manualDiv.innerHTML = '<div class="flex items-center gap-2 mb-2"><input type="radio" name="flight-opt" value="manual" class="w-5 h-5 text-blue-600"><span class="font-bold text-gray-900">Inserir Manualmente</span></div><input type="text" id="manual-flight-input" placeholder="Ex: TAP TP123, 14:00" class="w-full p-2 border rounded text-sm bg-white" onclick="event.stopPropagation()">';
+            list.appendChild(manualDiv);
+
+            document.getElementById('initial-view').classList.add('hidden');
+            document.getElementById('gap-filling-view').classList.add('hidden');
+            document.getElementById('flight-selection-view').classList.remove('hidden');
+        }
+
+        function confirmFlightSelection() {
+            var selected = document.querySelector('input[name="flight-opt"]:checked');
+            if (!selected) return alert("Selecione uma opção de voo.");
+            var activity = tripData.activities[selectedFlightActivityIndex];
+            
+            if (selected.value === 'manual') {
+                var manualText = document.getElementById('manual-flight-input').value;
+                if(!manualText) return alert("Digite os dados do voo.");
+                activity.description = "Voo " + manualText;
+                activity.flightNumber = manualText.split(' ')[1] || "0000";
+                activity.airline = manualText.split(' ')[0] || "Cia";
+                activity.flightDurationMinutes = 120; 
+                delete activity.flightOptions;
+            } else {
+                var idx = parseInt(selected.value);
+                var options = activity.flightOptions || [
+                        { airline: "Opção A", flightNumber: "08:00", time: "08:00" },
+                        { airline: "Opção B", flightNumber: "14:00", time: "14:00" },
+                        { airline: "Opção C", flightNumber: "20:00", time: "20:00" }
+                    ];
+                var opt = options[idx];
+                activity.time = opt.time;
+                activity.airline = opt.airline.split(' ')[0];
+                activity.flightNumber = opt.flightNumber;
+                if(opt.origin) activity.originAirport = opt.origin;
+                if(opt.destination) activity.destinationAirport = opt.destination;
+                activity.flightDurationMinutes = opt.durationMinutes || 120;
+                delete activity.flightOptions;
+            }
+            document.getElementById('flight-selection-view').classList.add('hidden');
+            if (!checkFlightClarification()) checkTransportClarification();
+        }
+
+        function checkTransportClarification() {
+            var transportIndex = tripData.activities.findIndex(function(a) { return a.transport === "ASK_USER"; });
+            if (transportIndex !== -1) {
+                selectedTransportActivityIndex = transportIndex;
+                missingInfoQueue.push({ key: 'transport_fix_' + transportIndex, q: 'Como vai se deslocar para: ' + tripData.activities[transportIndex].description + '?', type: 'text' });
+                askNext();
+                return true;
+            }
+            checkMissingInfo();
+            return false;
+        }
+
+        // --- HANDLERS PRINCIPAIS ---
+        async function handleInitialInput() {
+            var inputEl = document.getElementById('initial-input');
+            var inputVal = inputEl.value;
+            if ((!inputVal || inputVal.trim() === "") && selectedFiles.length === 0) return alert('Por favor, diga algo ou anexe um arquivo.');
+            showLoader('Consultando Modelo Fine-Tuned...');
+            var today = new Date().toLocaleDateString('pt-BR');
+            
+            var masterPrompt = `[ROLE] Você é o 'ddripp', expert logístico.
+            [REGRAS]
+            1. Se o usuário NÃO der o número do voo, gere 3 opções realistas em 'flightOptions' (Manhã, Tarde, Noite).
+            2. Extraia data, hora e local de tudo.
+            [DATA ATUAL]: ${today}
+            [INPUT]: "${inputVal}"`;
+
+            var schemaStructure = {
+                type: "OBJECT",
+                properties: {
+                    "missingCriticalInfo": { "type": "STRING" },
+                    "tripObjective": { "type": "STRING" },
+                    "weatherForecast": { "type": "STRING" },
+                    "origin": { "type": "STRING" },
+                    "destination": { "type": "STRING" },
+                    "startDate": { "type": "STRING" },
+                    "returnDate": { "type": "STRING" },
+                    "accommodation": { "type": "STRING" },
+                    "activities": { 
+                        "type": "ARRAY", 
+                        "items": { 
+                            "type": "OBJECT", 
+                            "properties": {
+                                "date": { "type": "STRING" },
+                                "time": { "type": "STRING" },
+                                "person": { "type": "STRING" },
+                                "description": { "type": "STRING" },
+                                "location": { "type": "STRING" },
+                                "type": { "type": "STRING", "enum": ["travel", "commitment", "meal", "leisure", "free_time"] },
+                                "transport": { "type": "STRING" },
+                                "flightNumber": { "type": "STRING" },
+                                "airline": { "type": "STRING" },
+                                "originAirport": { "type": "STRING" },
+                                "destinationAirport": { "type": "STRING" },
+                                "flightDurationMinutes": { "type": "INTEGER" },
+                                "flightOptions": {
+                                    "type": "ARRAY",
+                                    "items": {
+                                        "type": "OBJECT",
+                                        "properties": { "airline": {"type": "STRING"}, "flightNumber": {"type": "STRING"}, "time": {"type": "STRING"}, "origin": {"type": "STRING"}, "destination": {"type": "STRING"}, "durationMinutes": {"type": "INTEGER"} }
+                                    }
+                                }
+                            },
+                            "required": ["date", "time", "description", "type"]
+                        }
+                    }
+                },
+                "required": ["activities", "tripObjective"]
+            };
+
+            try {
+                var result = await callGeminiSmart(masterPrompt, schemaStructure);
+                hideLoader();
+                if (result) { 
+                    tripData = { ...tripData, ...result };
+                    if(!tripData.activities) tripData.activities = [];
+                    selectedFiles = []; renderFilePreviews();
+                    
+                    fillGeographicGaps(); 
+
+                    if (checkFlightClarification()) return; 
+                    if (checkTransportClarification()) return;
+                    
+                    if (tripData.missingCriticalInfo) {
+                        if (!tripData.destination && tripData.missingCriticalInfo.toLowerCase().includes("destino")) missingInfoQueue.push({ key: 'destination', q: tripData.missingCriticalInfo, type: 'location' });
+                        else if (!tripData.startDate && tripData.missingCriticalInfo.toLowerCase().includes("data")) missingInfoQueue.push({ key: 'startDate', q: tripData.missingCriticalInfo, type: 'date' });
+                    }
+                    checkMissingInfo();
+                }
+            } catch (e) {
+                hideLoader();
+                console.error(e);
+            }
+        };
+
+        function checkMissingInfo() {
+            if (!tripData.destination && missingInfoQueue.length === 0) missingInfoQueue.push({ key: 'destination', q: 'Qual o destino da viagem?', type: 'location' });
+            if (!tripData.startDate && missingInfoQueue.length === 0) missingInfoQueue.push({ key: 'startDate', q: 'Qual a data de início?', type: 'date' });
+            if (!tripData.returnDate && missingInfoQueue.length === 0) missingInfoQueue.push({ key: 'returnDate', q: 'Qual a data de retorno?', type: 'date' });
+            if (missingInfoQueue.length > 0) askNext();
+            else generateItinerary();
+        }
+
+        function askNext() {
+            var q = missingInfoQueue[0];
+            document.getElementById('gap-question').textContent = q.q;
+            var input = document.getElementById('gap-input');
+            input.value = '';
+            
+            if (q.type === 'location') {
+                document.getElementById('gap-input').classList.add('hidden');
+                var container = document.getElementById('place-autocomplete-container');
+                container.innerHTML = ''; container.classList.remove('hidden');
+                google.maps.importLibrary("places").then(({ PlaceAutocompleteElement }) => {
+                    const autocomplete = new PlaceAutocompleteElement();
+                    autocomplete.placeholder = "Digite a cidade ou local...";
+                    container.appendChild(autocomplete);
+                    autocomplete.addEventListener("gmp-places-select", async ({ place }) => {
+                        await place.fetchFields({ fields: ["displayName", "formattedAddress"] });
+                        input.value = place.formattedAddress || place.displayName;
+                    });
+                }).catch(e => {
+                    document.getElementById('gap-input').classList.remove('hidden');
+                    document.getElementById('place-autocomplete-container').classList.add('hidden');
+                });
+            } else {
+                if(q.type === 'date') input.type = 'date'; else input.type = 'text';
+                document.getElementById('gap-input').classList.remove('hidden');
+                document.getElementById('place-autocomplete-container').classList.add('hidden');
+            }
+            document.getElementById('gap-filling-view').classList.remove('hidden');
+            document.getElementById('initial-view').classList.add('hidden');
+            if(q.type !== 'location') input.focus();
+        }
+
+        function handleGapInput() {
+            var val = document.getElementById('gap-input').value;
+            if (!val) return alert('Por favor, responda.');
+            if (missingInfoQueue[0].key.startsWith('transport_fix_')) {
+                var idx = parseInt(missingInfoQueue[0].key.split('_')[2]);
+                tripData.activities[idx].transport = val;
+                tripData.activities[idx].description += " (" + val + ")";
+            } else {
+                tripData[missingInfoQueue[0].key] = val;
+            }
+            missingInfoQueue.shift();
+            if (missingInfoQueue.length > 0) askNext();
+            else {
+                document.getElementById('gap-filling-view').classList.add('hidden');
+                if (checkTransportClarification()) return;
+                generateItinerary();
+            }
+        }
+
+        function generateItinerary() {
+            document.getElementById('initial-view').classList.add('hidden');
+            document.getElementById('itinerary-view').classList.remove('hidden');
+            document.getElementById('fixed-footer-input').classList.remove('hidden');
+            document.getElementById('trip-title').textContent = tripData.tripObjective || ("Viagem para " + tripData.destination);
+            document.getElementById('trip-destination').textContent = tripData.destination;
+            var wikiLink = document.getElementById('trip-destination-link');
+            if(tripData.destination && wikiLink) wikiLink.href = "https://pt.wikipedia.org/wiki/Special:Search?search=" + encodeURIComponent(tripData.destination);
+            document.getElementById('trip-date').textContent = tripData.startDate + " a " + tripData.returnDate;
+            
+            loadHeaderImage();
+            fetchWeather(tripData.destination);
+            renderItinerary();
+        }
+
+        function renderItinerary() {
+            var container = document.getElementById('itinerary-content');
+            container.innerHTML = '';
+            if(tripData.activities) {
+                tripData.activities.sort(function(a, b) { return (a.date + a.time).localeCompare(b.date + b.time); });
+                var days = {};
+                tripData.activities.forEach(function(act) {
+                    if (!days[act.date]) days[act.date] = [];
+                    days[act.date].push(act);
+                });
+                Object.keys(days).sort().forEach(function(date) {
+                    var dayDiv = document.createElement('div');
+                    var parts = date.split('-');
+                    var dateStr = parts.length === 3 ? parts[2] + '/' + parts[1] : date; 
+                    
+                    var htmlContent = '<h3 class="sticky-header text-lg font-bold text-blue-800 uppercase tracking-wide border-b border-blue-100 mb-4 bg-[#f8f9fa]">' + dateStr + '</h3>' +
+                        '<div class="bg-white rounded-2xl card-shadow overflow-hidden">';
+                    days[date].forEach(function(act) {
+                        
+                        // COLUNA 2: PESSOA
+                        var personTag = '<div class="text-center"><span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-full w-full block truncate border border-blue-100">' + (act.person || 'Todos') + '</span></div>';
+
+                        if (act.type === 'travel' && act.flightNumber) { 
+                            var flightTime = act.time;
+                            var boardingTime = subtractTime(flightTime, 40); 
+                            var arrivalAirportTime = subtractTime(flightTime, 120); 
+                            var duration = act.flightDurationMinutes || 120; 
+                            var landingTime = addTime(flightTime, duration);
+                            var transferTime = addTime(landingTime, 30);
+                            
+                            htmlContent += '<details class="group border-b border-gray-50 last:border-0">' +
+                                '<summary class="p-4 hover:bg-gray-50 transition last:border-0 list-none">' +
+                                '<div class="itinerary-grid">' +
+                                '<div class="font-bold text-gray-700">' + act.time + '</div>' +
+                                personTag +
+                                '<div>' +
+                                '<div class="flex items-center justify-between">' +
+                                '<span class="font-bold text-blue-600"><i class="fas fa-plane-departure mr-2"></i>Decolagem ' + (act.airline || '') + ' ' + (act.flightNumber || '') + '</span>' +
+                                '<i class="fas fa-chevron-down text-gray-400 group-open:rotate-180 transition"></i>' +
+                                '</div>' +
+                                '<div class="text-xs text-gray-500 mt-1">' +
+                                '<span>' + (act.originAirport || 'Origem') + '</span> <i class="fas fa-long-arrow-alt-right"></i> <span>' + (act.destinationAirport || 'Destino') + '</span>' +
+                                '</div>' +
+                                '</div>' +
+                                '</div>' +
+                                '</summary>' +
+                                '<div class="bg-blue-50/50 p-4 text-sm text-gray-600 border-b border-blue-100 pl-24">' +
+                                '<div class="timeline-container">' +
+                                '<div class="flight-event"><div class="flight-dot"></div><div class="font-bold text-gray-700">' + arrivalAirportTime + '</div><div>Chegada no aeroporto.</div></div>' +
+                                '<div class="flight-event"><div class="flight-dot"></div><div class="font-bold text-gray-700">' + boardingTime + '</div><div>Embarque.</div></div>' +
+                                '<div class="flight-event"><div class="flight-dot active"></div><div class="font-bold text-blue-700">' + act.time + '</div><div>Decolagem.</div></div>' +
+                                '<div class="flight-event"><div class="flight-dot"></div><div class="font-bold text-gray-700">' + landingTime + '</div><div>Aterragem prevista.</div></div>' +
+                                '</div>' +
+                                '</div>' +
+                                '</details>';
+                        } else {
+                            var locationHtml = '';
+                            if (act.location) {
+                                var mapQuery = encodeURIComponent(act.location);
+                                var urlMap = 'https://www.google.com/maps/dir/?api=1&destination=' + mapQuery;
+                                if(act.location.includes("para")) {
+                                    // Link de rota
+                                    var parts = act.location.split("para");
+                                    urlMap = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(parts[0])}&destination=${encodeURIComponent(parts[1])}&travelmode=driving`;
+                                }
+                                locationHtml = '<a href="' + urlMap + '" target="_blank" class="map-link text-sm mt-1"> <i class="fas fa-map-marker-alt text-red-500 mr-1"></i> ' + act.location + '</a>';
+                            }
+                            
+                            htmlContent += '<div class="itinerary-grid hover:bg-gray-50 border-b border-gray-50 last:border-0">' +
+                                '<div class="font-bold text-gray-700 pt-1 text-right">' + (act.time || '--:--') + '</div>' +
+                                personTag +
+                                '<div>' +
+                                '<div class="flex items-start">' +
+                                '<div class="mr-3 mt-1">' + getIcon(act.type) + '</div>' +
+                                '<div>' +
+                                '<span class="font-semibold text-gray-800 text-lg block leading-tight">' + act.description + '</span>' +
+                                locationHtml +
+                                (act.transport ? '<div class="mt-2"><span class="inline-flex items-center text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded border border-gray-200"><i class="fas fa-car mr-1"></i>' + act.transport + '</span></div>' : '') +
+                                '</div>' +
+                                '</div>' +
+                                '</div>' +
+                                '</div>';
+                        }
+                    });
+                    htmlContent += '</div>';
+                    dayDiv.innerHTML = htmlContent;
+                    container.appendChild(dayDiv);
+                });
+            }
+        }
+
+        // --- UTILS ---
+        function loadHeaderImage() {
+            if (!SERVER_SHARE_URL) return;
+            var dynamicImgUrl = SERVER_SHARE_URL.replace('/share', '/dynamic-cover') + `?dest=${encodeURIComponent(tripData.destination)}&date=${encodeURIComponent(tripData.startDate||'')}`;
+            destinationImageUrl = dynamicImgUrl; 
+            var img = new Image();
+            img.onload = function() {
+                var headerBg = document.getElementById('header-bg-image');
+                if(headerBg) {
+                    headerBg.style.backgroundImage = `url('${dynamicImgUrl}')`;
+                    headerBg.style.opacity = '0.9';
+                    document.getElementById('header-loader').classList.add('hidden');
+                }
+            };
+            img.src = dynamicImgUrl;
+        }
+
+        async function fetchWeather(destination) {
+            try {
+                const { Geocoder } = await google.maps.importLibrary("geocoding");
+                const geocoder = new Geocoder();
+                geocoder.geocode({ 'address': destination }, function(results, status) {
+                    if (status === 'OK' && results[0]) {
+                        var lat = results[0].geometry.location.lat();
+                        var lng = results[0].geometry.location.lng();
+                        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto`)
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data.daily) {
+                                    var max = Math.round(data.daily.temperature_2m_max[0]);
+                                    var min = Math.round(data.daily.temperature_2m_min[0]);
+                                    var widget = document.getElementById('weather-widget');
+                                    if(widget) {
+                                        widget.innerHTML = `<span class="font-bold text-gray-800">${max}° / ${min}°</span>`;
+                                        widget.classList.remove('hidden');
+                                    }
+                                }
+                            });
                     }
                 });
-            } catch (e) { console.warn("Maps init error:", e); }
-        };
-
-        // --- SISTEMA DE GERAÇÃO ---
-        window.generateItinerary = async () => {
-            const userPrompt = document.getElementById('user-prompt').value;
-            const btn = document.getElementById('send-btn');
-            const icon = document.getElementById('send-icon');
-            const spinner = document.getElementById('loading-spinner');
-
-            if (!userPrompt && uploadedFiles.length === 0) return;
-
-            // UI Feedback
-            btn.disabled = true;
-            icon.classList.add('hidden');
-            spinner.classList.remove('hidden');
-
-            try {
-                // Instanciando o modelo Tuned com a System Instruction INJETADA
-                // Isso combina o poder do endpoint treinado com as regras da persona
-                const model = genAI.getGenerativeModel({ 
-                    model: TUNED_MODEL_ID,
-                    systemInstruction: `
-                        I. PAPEL E MISSÃO
-                        Você é o Agente Logístico DDRIPP, um assistente sênior com 20 anos de experiência.
-                        
-                        II. REGRAS DE OURO (NOVA PERSONA)
-                        1. Filtre rigorosamente: Quem, Onde, O quê, Quando, Transporte e Hospedagem.
-                        2. Identificação de Lacunas (Gap-Filling):
-                           - Sem Hotel? Gere: "[LEMBRETE - HOSPEDAGEM] Já temos hospedagem definida?".
-                           - Sem Transporte Crítico? Gere: "[LEMBRETE - TRANSPORTE] Já temos transporte?".
-                           - Crie etapas derivadas (ex: "08:30 - Saída") para garantir pontualidade.
-                        3. Processamento de Voos:
-                           - Se incompleto, peça busca simulada.
-                           - Se definido, insira AUTOMATICAMENTE: Chegada no Aeroporto (2h/3h antes) e Embarque (40min antes).
-                        4. Sustentabilidade:
-                           - Refeições (12h-14h / 19h-21h) vazias? Sugira restaurantes (preferência a pé).
-                           - Tempo livre? Sugira atividades de baixa emissão.
-
-                        FORMATO JSON OBRIGATÓRIO:
-                        Retorne APENAS um JSON Array:
-                        [
-                          {
-                            "day": "Dia X - Data",
-                            "activities": [
-                                { "time": "HH:MM", "description": "Atividade", "location": "Nome no Maps ou VAZIO", "notes": "Detalhes" }
-                            ]
-                          }
-                        ]
-                    `
-                });
-
-                // Montagem do Prompt
-                let fullPrompt = `Input do Usuário: ${userPrompt}.`;
-                if (selectedLocationContext) fullPrompt += `\n${selectedLocationContext}`;
-
-                // Chamada à API
-                const result = await model.generateContent([fullPrompt, ...uploadedFiles]);
-                const response = await result.response;
-                const text = response.text();
-                
-                // Tratamento da Resposta
-                const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
-                const data = JSON.parse(jsonStr);
-                
-                renderResponse(data);
-                
-                // Limpeza
-                document.getElementById('user-prompt').value = '';
-                document.getElementById('file-list').innerHTML = '';
-                uploadedFiles = [];
-                selectedLocationContext = "";
-                document.getElementById('maps-autocomplete').value = '';
-
-            } catch (error) {
-                console.error("Erro na geração:", error);
-                appendError(`Erro no Endpoint: ${error.message}. Verifique se o Endpoint está ativo no Google Cloud.`);
-            } finally {
-                btn.disabled = false;
-                icon.classList.remove('hidden');
-                spinner.classList.add('hidden');
-            }
-        };
-
-        // --- RENDERIZAÇÃO ---
-        function renderResponse(data) {
-            const container = document.getElementById('response-area');
-            const responseDiv = document.createElement('div');
-            responseDiv.className = "flex gap-4 fade-in mt-6";
-            
-            let contentHTML = `<div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden w-full">`;
-            
-            data.forEach(day => {
-                contentHTML += `
-                    <div class="border-b border-slate-100 last:border-0">
-                        <div class="bg-slate-50 px-5 py-3 border-b border-slate-100 flex justify-between items-center">
-                            <h4 class="font-bold text-slate-800 text-sm">${day.day}</h4>
-                        </div>
-                        <div class="p-4 space-y-3">
-                            ${day.activities.map(act => {
-                                // Lógica de Estilização Inteligente
-                                const desc = act.description.toLowerCase();
-                                const isSuggestion = desc.includes('sugestão') || desc.includes('livre');
-                                const isReminder = act.notes && act.notes.includes('[LEMBRETE');
-                                const isFlight = desc.includes('voo') || desc.includes('aeroporto');
-
-                                let borderClass = 'border-l-4 border-slate-700'; // Padrão
-                                if (isSuggestion) borderClass = 'border-l-4 border-green-500 bg-green-50/40';
-                                if (isReminder) borderClass = 'border-l-4 border-red-500 bg-red-50/40';
-                                if (isFlight) borderClass = 'border-l-4 border-blue-600 bg-slate-50';
-
-                                // Link Maps Inteligente
-                                let mapLink = '';
-                                if (act.location && act.location.trim().length > 1) {
-                                    const q = encodeURIComponent(act.location);
-                                    mapLink = `<a href="https://www.google.com/maps/search/?api=1&query=${q}" target="_blank" class="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded hover:bg-blue-100 mt-1 transition-colors">📍 Ver no Maps</a>`;
-                                }
-
-                                return `
-                                    <div class="pl-4 py-1 ${borderClass} rounded-r-lg">
-                                        <div class="flex gap-4">
-                                            <span class="font-mono text-xs font-bold text-slate-400 pt-1 w-10 text-right">${act.time}</span>
-                                            <div class="flex-1">
-                                                <div class="flex items-baseline justify-between gap-2">
-                                                    <h5 class="text-sm font-semibold text-slate-800">${act.description}</h5>
-                                                </div>
-                                                ${mapLink}
-                                                ${act.notes ? `<p class="text-xs text-slate-500 mt-1 italic ${isReminder ? 'text-red-600 font-bold' : ''}">${act.notes}</p>` : ''}
-                                            </div>
-                                        </div>
-                                    </div>
-                                `;
-                            }).join('')}
-                        </div>
-                    </div>
-                `;
-            });
-            contentHTML += `</div>`;
-
-            responseDiv.innerHTML = `
-                <div class="w-8 h-8 rounded-full bg-slate-100 flex-shrink-0 flex items-center justify-center text-slate-600 text-xs font-bold">IA</div>
-                <div class="flex-1 min-w-0">${contentHTML}</div>
-            `;
-            container.appendChild(responseDiv);
-            document.getElementById('chat-content').scrollTo({ top: 99999, behavior: 'smooth' });
+            } catch (e) { console.warn("Erro Clima", e); }
         }
 
-        // --- AUXILIARES ---
-        function appendError(msg) {
-            const container = document.getElementById('response-area');
-            container.innerHTML += `
-                <div class="flex gap-4 mt-6">
-                    <div class="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold">!</div>
-                    <div class="bg-red-50 text-red-800 p-4 rounded-xl text-sm border border-red-100">${msg}</div>
-                </div>
-            `;
+        function getIcon(type) { var map = { 'travel': '<i class="fas fa-plane text-blue-500 text-xl"></i>', 'meal': '<i class="fas fa-utensils text-orange-500 text-xl"></i>', 'leisure': '<i class="fas fa-camera text-green-500 text-xl"></i>', 'commitment': '<i class="fas fa-briefcase text-purple-500 text-xl"></i>' }; return map[type] || '<i class="fas fa-circle text-gray-300 text-xs"></i>'; }
+        function handleFileSelect(input) { 
+            var files = Array.from(input.files);
+            if (!files.length) return;
+            selectedFiles = files; // Simplificado para este exemplo
+            renderFilePreviews();
         }
+        async function handleAdjustmentInput() { alert('Ajuste simulado.'); }
+        function shareTrip() { window.open(`https://wa.me/?text=${encodeURIComponent(tripData.tripObjective)}`); }
+        function downloadPDF() { alert("Gerando PDF..."); }
+        function toggleVoice(inputId, btnElement) { alert("Voz ativada (Simulação)"); }
 
-        window.handleFileSelect = (event) => {
-            const files = Array.from(event.target.files);
-            const list = document.getElementById('file-list');
-            for (const file of files) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    uploadedFiles.push({ inlineData: { data: e.target.result.split(',')[1], mimeType: file.type } });
-                    const badge = document.createElement('div');
-                    badge.className = "bg-blue-50 border border-blue-100 text-blue-700 px-3 py-1 rounded-lg text-xs font-medium";
-                    badge.innerText = `📄 ${file.name}`;
-                    list.appendChild(badge);
-                };
-                reader.readAsDataURL(file);
-            }
-        };
-
-        window.autoResize = (t) => { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; };
-
-        // Voz
-        const micBtn = document.getElementById('mic-btn');
-        if ('webkitSpeechRecognition' in window) {
-            const recognition = new webkitSpeechRecognition();
-            recognition.lang = 'pt-BR';
-            micBtn.onclick = () => { recognition.start(); micBtn.style.color = '#ef4444'; };
-            recognition.onend = () => { micBtn.style.color = ''; };
-            recognition.onresult = (e) => {
-                document.getElementById('user-prompt').value += " " + e.results[0][0].transcript;
-                window.autoResize(document.getElementById('user-prompt'));
-            };
-        } else { micBtn.style.display = 'none'; }
+        window.handleInitialInput = handleInitialInput;
+        window.handleGapInput = handleGapInput;
+        window.confirmFlightSelection = confirmFlightSelection;
     </script>
 </body>
 </html>
